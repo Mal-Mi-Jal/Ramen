@@ -85,6 +85,12 @@ RamenLog/
 
 <br>
 
+## DB 모델링
+
+<img width="2146" height="1151" alt="Untitled" src="https://github.com/user-attachments/assets/bff7b6ff-9d2d-493d-b56a-ee82c9b8e8dc" />
+
+<br>
+
 ## 🚀 개발 로드맵
 
 - [x] 프로젝트 기획 및 설계
