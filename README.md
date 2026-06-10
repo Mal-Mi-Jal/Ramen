@@ -332,7 +332,7 @@ GET /restaurants/nearby
       {
         "id": "uuid",
         "kakao_place_id": "12345678",
-        "name": "이치란 라멘 홍대점",
+        "name": "라멘 홍대점",
         "address": "서울 마포구 ...",
         "latitude": 37.5563,
         "longitude": 126.9236,
@@ -360,7 +360,7 @@ GET /restaurants/{restaurant_id}
   "data": {
     "id": "uuid",
     "kakao_place_id": "12345678",
-    "name": "이치란 라멘 홍대점",
+    "name": "라멘 홍대점",
     "address": "서울 마포구 ...",
     "latitude": 37.5563,
     "longitude": 126.9236,
