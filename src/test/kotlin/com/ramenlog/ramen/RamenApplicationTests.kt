@@ -1,4 +1,4 @@
-package com.ramenroad.ramen
+package com.ramenlog.ramen
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest

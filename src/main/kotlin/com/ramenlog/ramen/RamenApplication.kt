@@ -1,4 +1,4 @@
-package com.ramenroad.ramen
+package com.ramenlog.ramen
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
