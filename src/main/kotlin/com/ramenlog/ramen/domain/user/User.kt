@@ -27,5 +27,14 @@ open class User(
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_at", nullable = false)
-    var updatedAt: LocalDateTime = LocalDateTime.now()
-)
+    var updatedAt: LocalDateTime = LocalDateTime.now(),
+
+    @Column(name = "refresh_token")
+    var refreshToken: String? = null
+){
+    fun updateRefreshToken(token : String?){
+        this.refreshToken = token
+        this.updatedAt = LocalDateTime.now()
+    }
+
+}
