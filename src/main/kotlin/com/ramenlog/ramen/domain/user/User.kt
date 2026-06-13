@@ -37,4 +37,10 @@ open class User(
         this.updatedAt = LocalDateTime.now()
     }
 
+    fun updateProfile(newNickname: String, newProfileImageUrl: String?){
+        this.nickname = newNickname
+        this.profileImageUrl = newProfileImageUrl
+        this.updatedAt = LocalDateTime.now()
+    }
+
 }
