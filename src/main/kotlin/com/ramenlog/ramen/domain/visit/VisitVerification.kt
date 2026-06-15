@@ -4,6 +4,8 @@ import com.ramenlog.ramen.domain.restaurant.Restaurant
 import com.ramenlog.ramen.domain.user.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -48,8 +50,10 @@ open class VisitVerification (
     @Column(name = "stay_duration_seconds")
     var stayDurationSeconds: Int? = null,
 
-    @Column(nullable = false, length = 50)
-    var status: String = "pending", // pending, verified, failed
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var status: VerificationStatus =
+        VerificationStatus.PENDING,
 
     @Column(name = "verification_type", nullable = false, length = 50)
     var verificationType: String = "gps", // 나중에 receipt

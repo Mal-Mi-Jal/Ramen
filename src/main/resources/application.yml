@@ -18,3 +18,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+kakao:
+  api:
+    key: 7e32bbba57af7809711f1088abed46fd

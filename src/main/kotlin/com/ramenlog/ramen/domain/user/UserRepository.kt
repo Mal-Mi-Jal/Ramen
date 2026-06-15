@@ -10,4 +10,5 @@ interface UserRepository : JpaRepository<User, UUID>{
     fun findByNickname(nickname: String) : User?
 
     fun findByRefreshToken(token : String): User?
+
 }

@@ -1,6 +1,7 @@
 package com.ramenlog.ramen.api.user
 
 import com.ramenlog.ramen.api.application.user.UserService
+import com.ramenlog.ramen.domain.user.User
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.core.userdetails.UserDetails
@@ -18,23 +19,28 @@ class UserController (
 ){
     @GetMapping("/me")
     fun getMyProfile(
-        @AuthenticationPrincipal userDetails: UserDetails
+        @AuthenticationPrincipal user: User
     ): ResponseEntity<MyProfileResponse> {
 
-        val email = userDetails.username
-
-        val response = userService.getMyProfile(email)
+        val response =
+            userService.getMyProfile(
+                user.email
+            )
 
         return ResponseEntity.ok(response)
     }
 
     @PatchMapping("/me")
     fun updateProfile(
-        @AuthenticationPrincipal userDetails: UserDetails,
+        @AuthenticationPrincipal user: User,
         @RequestBody request: UpdateProfileRequest
     ): ResponseEntity<MyProfileResponse> {
-        val email = userDetails.username
-        val response = userService.updateProfile(email, request)
+
+        val response =
+            userService.updateProfile(
+                user.email,
+                request
+            )
 
         return ResponseEntity.ok(response)
     }
