@@ -22,3 +22,6 @@ spring:
 kakao:
   api:
     key: 7e32bbba57af7809711f1088abed46fd
+
+verification:
+  required-stay-seconds: 30
