@@ -1,16 +1,19 @@
 package com.ramenlog.ramen.api.application.verification
 
-import com.ramenlog.ramen.api.verification.VerificationData
-import com.ramenlog.ramen.api.verification.VerificationEnterRequest
-import com.ramenlog.ramen.api.verification.VerificationEnterResponse
+import com.ramenlog.ramen.api.verification.dto.VerificationData
+import com.ramenlog.ramen.api.verification.dto.VerificationEnterRequest
+import com.ramenlog.ramen.api.verification.dto.VerificationEnterResponse
 import com.ramenlog.ramen.api.common.AlreadyPendingException
 import com.ramenlog.ramen.api.common.OutOfRangeException
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
-import com.ramenlog.ramen.api.verification.VerificationError
-import com.ramenlog.ramen.api.verification.VerificationErrorData
-import com.ramenlog.ramen.api.verification.VerificationVerifyData
-import com.ramenlog.ramen.api.verification.VerificationVerifyRequest
-import com.ramenlog.ramen.api.verification.VerificationVerifyResponse
+import com.ramenlog.ramen.api.verification.dto.VerificationError
+import com.ramenlog.ramen.api.verification.dto.VerificationErrorData
+import com.ramenlog.ramen.api.verification.dto.VerificationHistoryData
+import com.ramenlog.ramen.api.verification.dto.VerificationHistoryItem
+import com.ramenlog.ramen.api.verification.dto.VerificationHistoryResponse
+import com.ramenlog.ramen.api.verification.dto.VerificationVerifyData
+import com.ramenlog.ramen.api.verification.dto.VerificationVerifyRequest
+import com.ramenlog.ramen.api.verification.dto.VerificationVerifyResponse
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.visit.VerificationStatus
@@ -18,6 +21,7 @@ import com.ramenlog.ramen.domain.visit.VisitVerification
 import com.ramenlog.ramen.domain.visit.VisitVerificationRepository
 import com.ramenlog.ramen.util.LocationUtils
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -212,6 +216,86 @@ class VerificationService (
 
             message =
                 "방문 인증이 완료되었습니다! 리뷰를 남겨주세요."
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getMyVerifications(
+        user: User,
+        status: String?,
+        page: Int,
+        size: Int
+    ): VerificationHistoryResponse {
+
+        val pageable =
+            PageRequest.of(page - 1, size)
+
+        val verificationPage =
+
+            if (status != null) {
+
+                visitVerificationRepository
+                    .findByUserAndStatus(
+                        user,
+                        VerificationStatus.valueOf(
+                            status.uppercase()
+                        ),
+                        pageable
+                    )
+
+            } else {
+
+                visitVerificationRepository
+                    .findByUser(
+                        user,
+                        pageable
+                    )
+            }
+
+        val items =
+            verificationPage.content.map {
+
+                VerificationHistoryItem(
+
+                    verificationId =
+                        it.id.toString(),
+
+                    restaurantId =
+                        it.restaurant.id.toString(),
+
+                    restaurantName =
+                        it.restaurant.name,
+
+                    status =
+                        it.status.name.lowercase(),
+
+                    enteredAt =
+                        it.enteredAt,
+
+                    verifiedAt =
+                        it.verifiedAt
+                )
+            }
+
+        return VerificationHistoryResponse(
+
+            success = true,
+
+            data =
+                VerificationHistoryData(
+
+                    verifications = items,
+
+                    page = page,
+
+                    size = size,
+
+                    totalElements =
+                        verificationPage.totalElements,
+
+                    totalPages =
+                        verificationPage.totalPages
+                )
         )
     }
 

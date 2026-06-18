@@ -1,4 +1,4 @@
-package com.ramenlog.ramen.api.user
+package com.ramenlog.ramen.api.user.dto
 
 data class UpdateProfileRequest (
     val nickname: String,

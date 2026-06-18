@@ -1,4 +1,4 @@
-package com.ramenlog.ramen.api.verification
+package com.ramenlog.ramen.api.verification.dto
 
 data class VerificationVerifyRequest (
     val latitude: Double,

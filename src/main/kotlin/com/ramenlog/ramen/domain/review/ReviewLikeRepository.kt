@@ -8,4 +8,6 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, UUID> {
     fun existsByReviewIdAndUserId(reviewId: UUID, userId: UUID): Boolean
 
     fun findByReviewIdAndUserId(reviewId: UUID, userId: UUID): ReviewLike?
+
+    fun countByReviewId(reviewId: UUID): Long
 }

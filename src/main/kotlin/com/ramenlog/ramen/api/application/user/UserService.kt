@@ -1,7 +1,7 @@
 package com.ramenlog.ramen.api.application.user
 
-import com.ramenlog.ramen.api.user.MyProfileResponse
-import com.ramenlog.ramen.api.user.UpdateProfileRequest
+import com.ramenlog.ramen.api.user.dto.MyProfileResponse
+import com.ramenlog.ramen.api.user.dto.UpdateProfileRequest
 import com.ramenlog.ramen.domain.user.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

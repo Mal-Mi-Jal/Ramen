@@ -1,4 +1,4 @@
-package com.ramenlog.ramen.api.user
+package com.ramenlog.ramen.api.user.dto
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.ramenlog.ramen.domain.user.User

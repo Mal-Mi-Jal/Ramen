@@ -53,4 +53,15 @@ open class Review (
     @Column(name = "updated_at")
     var updatedAt: LocalDateTime = LocalDateTime.now()
 
-    )
+){
+    fun update(
+        rating: Int,
+        content: String?,
+        revisitIntention: Boolean
+    ) {
+        this.rating = rating
+        this.content = content
+        this.revisitIntention = revisitIntention
+        this.updatedAt = LocalDateTime.now()
+    }
+}

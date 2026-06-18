@@ -1,4 +1,4 @@
-package com.ramenlog.ramen.api.verification
+package com.ramenlog.ramen.api.verification.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDateTime

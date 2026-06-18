@@ -5,4 +5,6 @@ import java.util.UUID
 
 interface ReviewCommentRepository : JpaRepository<ReviewComment, UUID> {
     fun findByReviewId(reviewId: UUID): List<ReviewComment>
+
+    fun countByReviewId(reviewId: UUID): Long
 }

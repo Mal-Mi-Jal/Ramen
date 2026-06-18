@@ -65,4 +65,73 @@ class GlobalExceptionHandler {
             .status(HttpStatus.NOT_FOUND)
             .body(errorResponse)
     }
+
+    @ExceptionHandler(
+        VerificationRequiredException::class
+    )
+    fun handleVerificationRequired(
+        e: VerificationRequiredException
+    ): ResponseEntity<Map<String, Any>> {
+
+        return ResponseEntity.badRequest().body(
+            mapOf(
+                "success" to false,
+                "code" to "VERIFICATION_REQUIRED",
+                "message" to
+                        "방문 인증이 완료되지 않았습니다."
+            )
+        )
+    }
+
+    @ExceptionHandler(
+        AlreadyReviewedException::class
+    )
+    fun handleAlreadyReviewed(
+        e: AlreadyReviewedException
+    ): ResponseEntity<Map<String, Any>> {
+
+        return ResponseEntity.badRequest().body(
+            mapOf(
+                "success" to false,
+                "code" to "ALREADY_REVIEWED",
+                "message" to
+                        "이미 리뷰를 작성했습니다."
+            )
+        )
+    }
+
+    @ExceptionHandler(
+        InvalidRatingException::class
+    )
+    fun handleInvalidRating(
+        e: InvalidRatingException
+    ): ResponseEntity<Map<String, Any>> {
+
+        return ResponseEntity.badRequest().body(
+            mapOf(
+                "success" to false,
+                "code" to "INVALID_RATING",
+                "message" to
+                        "별점은 1~5 사이여야 합니다."
+            )
+        )
+    }
+
+    @ExceptionHandler(
+        ReviewNotFoundException::class
+    )
+    fun handleReviewNotFound(
+        e: ReviewNotFoundException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse: Map<String, Any> = mapOf(
+            "success" to false,
+            "message" to (e.message ?: "리뷰를 찾을 수 없습니다.")
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
+
 }

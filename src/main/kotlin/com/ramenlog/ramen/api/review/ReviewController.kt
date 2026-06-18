@@ -1,0 +1,94 @@
+package com.ramenlog.ramen.api.review
+
+import com.ramenlog.ramen.api.application.review.ReviewService
+import com.ramenlog.ramen.api.review.dto.CreateReviewRequest
+import com.ramenlog.ramen.api.review.dto.CreateReviewResponse
+import com.ramenlog.ramen.api.review.dto.DeleteReviewResponse
+import com.ramenlog.ramen.domain.review.ReviewDetailResponse
+import com.ramenlog.ramen.api.review.dto.UpdateReviewRequest
+import com.ramenlog.ramen.api.review.dto.UpdateReviewResponse
+import com.ramenlog.ramen.domain.user.User
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
+
+@RestController
+@RequestMapping("/reviews")
+class ReviewController(
+    private val reviewService: ReviewService
+) {
+
+    @PostMapping
+    fun createReview(
+        @AuthenticationPrincipal user: User,
+        @RequestBody request: CreateReviewRequest
+    ): ResponseEntity<CreateReviewResponse> {
+
+        val response =
+            reviewService.createReview(
+                user,
+                request
+            )
+
+        return ResponseEntity.status(
+            HttpStatus.CREATED
+        ).body(response)
+    }
+
+    @GetMapping("/{reviewId}")
+    fun getReviewDetail(
+        @PathVariable reviewId: UUID
+    ): ResponseEntity<ReviewDetailResponse> {
+
+        val response =
+            reviewService.getReviewDetail(
+                reviewId
+            )
+
+        return ResponseEntity.ok(response)
+    }
+
+    @PatchMapping("/{reviewId}")
+    fun updateReview(
+        @PathVariable reviewId: UUID,
+
+        @AuthenticationPrincipal user: User,
+
+        @RequestBody request: UpdateReviewRequest
+    ): ResponseEntity<UpdateReviewResponse> {
+
+        val response =
+            reviewService.updateReview(
+                reviewId,
+                user,
+                request
+            )
+
+        return ResponseEntity.ok(response)
+    }
+
+    @DeleteMapping("/{reviewId}")
+    fun deleteReview(
+        @PathVariable reviewId: UUID,
+
+        @AuthenticationPrincipal user: User
+    ): ResponseEntity<DeleteReviewResponse> {
+
+        val response =
+            reviewService.deleteReview(
+                reviewId,
+                user
+            )
+
+        return ResponseEntity.ok(response)
+    }
+}

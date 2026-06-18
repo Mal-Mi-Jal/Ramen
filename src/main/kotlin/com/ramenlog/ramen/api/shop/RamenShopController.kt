@@ -1,6 +1,8 @@
 package com.ramenlog.ramen.api.shop
 
+import com.ramenlog.ramen.api.application.review.ReviewService
 import com.ramenlog.ramen.api.application.shop.RamenShopService
+import com.ramenlog.ramen.api.review.dto.RestaurantReviewsResponse
 import com.ramenlog.ramen.api.shop.dto.KakaoPlaceResponse
 import com.ramenlog.ramen.api.shop.dto.NearbyRestaurantsResponse
 import com.ramenlog.ramen.api.shop.dto.RestaurantDetailResponse
@@ -15,7 +17,8 @@ import java.util.UUID
 @RestController
 @RequestMapping("/restaurants")
 class RamenShopController (
-    private val ramenShopService: RamenShopService
+    private val ramenShopService: RamenShopService,
+    private val reviewService: ReviewService
 ){
 
     @GetMapping("/nearby")
@@ -37,6 +40,29 @@ class RamenShopController (
             ramenShopService.getRestaurantDetail(
                 restaurantId
             )
+
+        return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/{restaurantId}/reviews")
+    fun getRestaurantReviews(
+        @PathVariable restaurantId: UUID,
+
+        @RequestParam(defaultValue = "latest")
+        sort: String,
+
+        @RequestParam(defaultValue = "1")
+        page: Int,
+
+        @RequestParam(defaultValue = "20")
+        size: Int
+    ): ResponseEntity<RestaurantReviewsResponse>{
+        val response = reviewService.getRestaurantReviews(
+            restaurantId,
+            sort,
+            page,
+            size
+        )
 
         return ResponseEntity.ok(response)
     }
