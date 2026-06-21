@@ -24,7 +24,7 @@ class RestaurantService (
         .baseUrl("https://dapi.kakao.com")
         .build()
 
-    fun searchNearbyRamenShops(latitude: String, longitude: String): NearbyRestaurantsResponse {
+    fun searchNearbyRamenShops(latitude: Double, longitude: Double): NearbyRestaurantsResponse {
         val allDocuments = mutableListOf<KakaoPlaceDocument>()
 
         for(page in 1..3){
@@ -34,8 +34,8 @@ class RestaurantService (
                     uriBuilder
                         .path("/v2/local/search/keyword.json")
                         .queryParam("query", "라멘")
-                        .queryParam("x", longitude)
-                        .queryParam("y", latitude)
+                        .queryParam("x", longitude.toString())
+                        .queryParam("y", latitude.toString())
                         .queryParam("radius", 20000)
                         .queryParam("sort", "distance")
                         .queryParam("page" , page)
@@ -45,11 +45,6 @@ class RestaurantService (
                 .retrieve()
                 .bodyToMono(KakaoPlaceResponse::class.java)
                 .block()
-            println("===== PAGE $page =====")
-
-            response?.documents?.forEach {
-                println(it.placeName)
-            }
 
             if(response == null) continue
 

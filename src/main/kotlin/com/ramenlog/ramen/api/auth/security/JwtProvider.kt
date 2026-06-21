@@ -3,14 +3,17 @@ package com.ramenlog.ramen.api.auth.security
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets
 import java.util.Date
 import java.util.UUID
 
 @Component
-class JwtProvider {
-    private val secretKeyString = "ramenlog-secret-key-for-jwt-token-authentication-2026"
+class JwtProvider (
+    @Value("\${jwt.secret}")
+    private val secretKeyString: String
+){
     private val key = Keys.hmacShaKeyFor(secretKeyString.toByteArray(StandardCharsets.UTF_8))
 
         // 토큰 만료 시간 (1일 = 24시간 * 60분 * 60초 * 1000밀리초)

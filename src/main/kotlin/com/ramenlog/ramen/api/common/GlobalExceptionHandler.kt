@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -221,6 +222,23 @@ class GlobalExceptionHandler {
 
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
+
+    @ExceptionHandler(
+        MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatch(
+        e: MethodArgumentTypeMismatchException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse = mapOf(
+            "success" to false,
+            "code" to "INVALID_PARAMETER",
+            "message" to "${e.name} 파라미터 값이 올바르지 않습니다."
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
             .body(errorResponse)
     }
 }

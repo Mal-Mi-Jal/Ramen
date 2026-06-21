@@ -2,9 +2,12 @@ package com.ramenlog.ramen.api.auth.security
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 
@@ -13,6 +16,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 class SecurityConfig (
     private val jwtAuthenticationFilter: JwtAuthenticationFilter
 ){
+    @Bean
+    fun passwordEncoder(): PasswordEncoder {
+        return BCryptPasswordEncoder()
+    }
+
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
@@ -27,6 +35,8 @@ class SecurityConfig (
 
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers("/auth/**").permitAll()
+                    // 명세서상 비로그인도 조회 가능한 공개 API
+                    .requestMatchers(HttpMethod.GET, "/restaurants/nearby", "/restaurants/*", "/restaurants/*/reviews").permitAll()
                     .anyRequest().authenticated()
             }
 

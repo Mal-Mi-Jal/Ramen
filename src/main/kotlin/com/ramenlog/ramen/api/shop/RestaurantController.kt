@@ -27,8 +27,8 @@ class RestaurantController (
 
     @GetMapping("/nearby")
     fun searchNearbyShops(
-        @RequestParam latitude: String,
-        @RequestParam longitude: String
+        @RequestParam latitude: Double,
+        @RequestParam longitude: Double
     ): ResponseEntity<NearbyRestaurantsResponse>{
         val response = restaurantService.searchNearbyRamenShops(latitude, longitude)
 

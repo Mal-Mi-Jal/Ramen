@@ -6,13 +6,15 @@ import com.ramenlog.ramen.api.auth.dto.TokenData
 import com.ramenlog.ramen.api.auth.security.JwtProvider
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.user.UserRepository
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 class AuthService (
     private val userRepository: UserRepository,
-    private val jwtProvider: JwtProvider
+    private val jwtProvider: JwtProvider,
+    private val passwordEncoder: PasswordEncoder
 ){
 
     @Transactional
@@ -27,7 +29,7 @@ class AuthService (
 
         val newUser = User(
             email = request.email,
-            passwordHash = request.password,
+            passwordHash = passwordEncoder.encode(request.password)!!,
             nickname = request.nickname
         )
 
@@ -39,7 +41,7 @@ class AuthService (
         val user = userRepository.findByEmail(request.email)
             ?: throw IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다.")
 
-        if (user.passwordHash != request.password) {
+        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
             throw IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다.")
         }
 

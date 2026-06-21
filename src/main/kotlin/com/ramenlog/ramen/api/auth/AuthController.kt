@@ -22,7 +22,7 @@ class AuthController (
 ){
 
     @PostMapping("/signup")
-    fun signup(@RequestBody request: SignupRequest): ResponseEntity<Map<String, Any>> {
+    fun signup(@Valid @RequestBody request: SignupRequest): ResponseEntity<Map<String, Any>> {
         authService.signup(request)
 
         val response = mapOf(
