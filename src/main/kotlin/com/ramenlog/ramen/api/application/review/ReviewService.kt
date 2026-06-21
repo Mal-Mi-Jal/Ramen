@@ -1,17 +1,30 @@
 package com.ramenlog.ramen.api.application.review
 
+import com.ramenlog.ramen.api.common.AlreadyLikedException
 import com.ramenlog.ramen.api.common.AlreadyReviewedException
+import com.ramenlog.ramen.api.common.CannotLikeOwnReviewException
+import com.ramenlog.ramen.api.common.EmptyCommentException
 import com.ramenlog.ramen.api.common.InvalidRatingException
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
+import com.ramenlog.ramen.api.common.ReviewLikeNotFoundException
 import com.ramenlog.ramen.api.common.ReviewNotFoundException
 import com.ramenlog.ramen.api.common.VerificationRequiredException
+import com.ramenlog.ramen.api.review.dto.CommentData
+import com.ramenlog.ramen.api.review.dto.CommentItem
+import com.ramenlog.ramen.api.review.dto.CommentUser
+import com.ramenlog.ramen.api.review.dto.CommentsData
+import com.ramenlog.ramen.api.review.dto.CreateCommentRequest
+import com.ramenlog.ramen.api.review.dto.CreateCommentResponse
 import com.ramenlog.ramen.api.review.dto.CreateReviewRequest
 import com.ramenlog.ramen.api.review.dto.CreateReviewResponse
 import com.ramenlog.ramen.api.review.dto.DeleteReviewResponse
+import com.ramenlog.ramen.api.review.dto.GetCommentsResponse
 import com.ramenlog.ramen.api.review.dto.PaginationData
 import com.ramenlog.ramen.api.review.dto.RestaurantReviewsData
 import com.ramenlog.ramen.api.review.dto.RestaurantReviewsResponse
 import com.ramenlog.ramen.api.review.dto.ReviewData
+import com.ramenlog.ramen.api.review.dto.ReviewLikeData
+import com.ramenlog.ramen.api.review.dto.ReviewLikeResponse
 import com.ramenlog.ramen.api.review.dto.ReviewPhotoData
 import com.ramenlog.ramen.api.review.dto.ReviewSummary
 import com.ramenlog.ramen.api.review.dto.ReviewUser
@@ -27,6 +40,8 @@ import com.ramenlog.ramen.domain.review.ReviewRestaurant
 import com.ramenlog.ramen.api.review.dto.UpdateReviewData
 import com.ramenlog.ramen.api.review.dto.UpdateReviewRequest
 import com.ramenlog.ramen.api.review.dto.UpdateReviewResponse
+import com.ramenlog.ramen.domain.review.ReviewComment
+import com.ramenlog.ramen.domain.review.ReviewLike
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.visit.VerificationStatus
 import com.ramenlog.ramen.domain.visit.VisitVerificationRepository
@@ -455,6 +470,213 @@ class ReviewService (
             message = "리뷰가 삭제되었습니다."
         )
     }
+
+    @Transactional
+    fun likeReview(
+        reviewId: UUID,
+        user: User
+    ): ReviewLikeResponse {
+        val review = reviewRepository.findById(reviewId)
+            .orElseThrow{
+                ReviewNotFoundException()
+            }
+
+        if (review.user.id == user.id){
+            throw CannotLikeOwnReviewException()
+        }
+
+        if (reviewLikeRepository.existsByReviewIdAndUserId(
+                review.id!!, user.id!!)
+            )
+        {
+            throw AlreadyLikedException()
+        }
+
+        reviewLikeRepository.save(
+            ReviewLike(
+                review = review,
+                user = user
+            )
+        )
+
+        val likeCount =
+            reviewLikeRepository.countByReviewId(
+                review.id!!
+            )
+
+        return ReviewLikeResponse(
+            success = true,
+
+            data = ReviewLikeData(
+                reviewId = reviewId,
+                likeCount = likeCount
+            )
+        )
+
+    }
+
+    @Transactional
+    fun unlikeReview(
+        reviewId: UUID,
+        user: User
+    ): ReviewLikeResponse {
+
+        val review =
+            reviewRepository.findById(reviewId)
+                .orElseThrow {
+                    ReviewNotFoundException()
+                }
+
+        val reviewLike =
+            reviewLikeRepository
+                .findByReviewIdAndUserId(
+                    reviewId,
+                    user.id!!
+                )
+                ?: throw ReviewLikeNotFoundException()
+
+        reviewLikeRepository.delete(
+            reviewLike
+        )
+
+        val likeCount =
+            reviewLikeRepository.countByReviewId(
+                reviewId
+            )
+
+        return ReviewLikeResponse(
+            success = true,
+
+            data = ReviewLikeData(
+                reviewId = reviewId,
+                likeCount = likeCount
+            )
+        )
+    }
+
+    @Transactional
+    fun createComment(
+        reviewId: UUID,
+        user: User,
+        request: CreateCommentRequest
+    ): CreateCommentResponse {
+        if (request.content.isBlank()) {
+            throw EmptyCommentException()
+        }
+
+        val review =
+            reviewRepository.findById(reviewId)
+                .orElseThrow {
+                    ReviewNotFoundException()
+                }
+
+        val comment =
+            reviewCommentRepository.save(
+
+                ReviewComment(
+                    review = review,
+                    user = user,
+                    content = request.content
+                )
+            )
+
+        return CreateCommentResponse(
+            success = true,
+
+            data = CommentData(
+                id = comment.id!!,
+
+                user = CommentUser(
+                    id = user.id!!,
+
+                    nickname = user.nickname,
+
+                    profileImageUrl =
+                        user.profileImageUrl
+                ),
+
+                content = comment.content,
+
+                createdAt =
+                    comment.createdAt
+            )
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getComments(
+        reviewId: UUID,
+        page: Int,
+        size: Int
+    ): GetCommentsResponse {
+
+        reviewRepository.findById(reviewId)
+            .orElseThrow {
+                ReviewNotFoundException()
+            }
+
+        val pageable =
+            PageRequest.of(
+                page - 1,
+                size,
+                Sort.by("createdAt").ascending()
+            )
+
+        val comments =
+            reviewCommentRepository.findByReviewId(
+                reviewId,
+                pageable
+            )
+
+        val commentItems =
+            comments.content.map { comment ->
+
+                CommentItem(
+                    id = comment.id!!,
+
+                    user =
+                        CommentUser(
+                            id = comment.user.id!!,
+
+                            nickname =
+                                comment.user.nickname,
+
+                            profileImageUrl =
+                                comment.user.profileImageUrl
+                        ),
+
+                    content =
+                        comment.content,
+
+                    createdAt =
+                        comment.createdAt
+                )
+            }
+
+        return GetCommentsResponse(
+            success = true,
+
+            data =
+                CommentsData(
+                    comments =
+                        commentItems,
+
+                    pagination =
+                        PaginationData(
+                            total =
+                                comments.totalElements,
+
+                            page = page,
+
+                            size = size,
+
+                            totalPages =
+                                comments.totalPages
+                        )
+                )
+        )
+    }
+
 
 
 }

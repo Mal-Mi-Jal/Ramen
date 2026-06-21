@@ -134,4 +134,75 @@ class GlobalExceptionHandler {
             .body(errorResponse)
     }
 
+    @ExceptionHandler(
+        AlreadyLikedException::class
+    )
+    fun handleAlreadyLiked(
+        e: AlreadyLikedException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse =
+            mapOf(
+                "success" to false,
+                "message" to e.message!!
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(errorResponse)
+    }
+
+    @ExceptionHandler(
+        CannotLikeOwnReviewException::class
+    )
+    fun handleCannotLikeOwnReview(
+        e: CannotLikeOwnReviewException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse =
+            mapOf(
+                "success" to false,
+                "message" to e.message!!
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.CONFLICT)
+            .body(errorResponse)
+    }
+
+    @ExceptionHandler(
+        ReviewLikeNotFoundException::class
+    )
+    fun handleReviewLikeNotFound(
+        e: ReviewLikeNotFoundException
+    ) : ResponseEntity<Map<String, Any>> {
+
+        val errorResponse =
+            mapOf(
+                "success" to false,
+                "message" to e.message!!
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
+
+    @ExceptionHandler(
+        EmptyCommentException::class
+    )
+    fun handleEmptyComment(
+        e: EmptyCommentException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse =
+            mapOf(
+                "success" to false,
+                "message" to e.message!!
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(errorResponse)
+    }
 }

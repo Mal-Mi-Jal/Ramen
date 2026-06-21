@@ -1,9 +1,12 @@
 package com.ramenlog.ramen.api.review
 
 import com.ramenlog.ramen.api.application.review.ReviewService
+import com.ramenlog.ramen.api.review.dto.CreateCommentRequest
+import com.ramenlog.ramen.api.review.dto.CreateCommentResponse
 import com.ramenlog.ramen.api.review.dto.CreateReviewRequest
 import com.ramenlog.ramen.api.review.dto.CreateReviewResponse
 import com.ramenlog.ramen.api.review.dto.DeleteReviewResponse
+import com.ramenlog.ramen.api.review.dto.ReviewLikeResponse
 import com.ramenlog.ramen.domain.review.ReviewDetailResponse
 import com.ramenlog.ramen.api.review.dto.UpdateReviewRequest
 import com.ramenlog.ramen.api.review.dto.UpdateReviewResponse
@@ -90,5 +93,59 @@ class ReviewController(
             )
 
         return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/{reviewId}/likes")
+    fun likeReview(
+        @PathVariable reviewId: UUID,
+        @AuthenticationPrincipal user: User
+    ): ResponseEntity<ReviewLikeResponse> {
+        val response = reviewService.likeReview(
+            reviewId,
+            user
+        )
+
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(response)
+    }
+
+    @DeleteMapping("/{reviewId}/likes")
+    fun unlikeReview(
+        @PathVariable reviewId: UUID,
+
+        @AuthenticationPrincipal user: User
+    ): ResponseEntity<ReviewLikeResponse> {
+
+        val response =
+            reviewService.unlikeReview(
+                reviewId,
+                user
+            )
+
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/{reviewId}/comments")
+    fun createComment(
+
+        @PathVariable reviewId: UUID,
+
+        @AuthenticationPrincipal user: User,
+
+        @RequestBody request: CreateCommentRequest
+
+    ): ResponseEntity<CreateCommentResponse> {
+
+        val response =
+            reviewService.createComment(
+                reviewId,
+                user,
+                request
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(response)
     }
 }
