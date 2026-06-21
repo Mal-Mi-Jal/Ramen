@@ -1,6 +1,5 @@
 package com.ramenlog.ramen.api.application.shop
 
-import com.ramenlog.ramen.api.shop.dto.KakaoMeta
 import com.ramenlog.ramen.api.shop.dto.KakaoPlaceDocument
 import com.ramenlog.ramen.api.shop.dto.KakaoPlaceResponse
 import com.ramenlog.ramen.api.shop.dto.NearbyRestaurantsResponse
@@ -16,7 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import java.util.UUID
 
 @Service
-class RamenShopService (
+class RestaurantService (
     @Value("\${kakao.api.key}")
     private val kakaoApiKey: String,
     private val restaurantRepository: RestaurantRepository

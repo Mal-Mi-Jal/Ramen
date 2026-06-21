@@ -205,4 +205,22 @@ class GlobalExceptionHandler {
             .status(HttpStatus.BAD_REQUEST)
             .body(errorResponse)
     }
+
+    @ExceptionHandler(
+        ReviewCommentNotFoundException::class
+    )
+    fun handleReviewCommentNotFound(
+        e: ReviewCommentNotFoundException
+    ): ResponseEntity<Map<String, Any>> {
+
+        val errorResponse =
+            mapOf(
+                "success" to false,
+                "message" to e.message!!
+            )
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(errorResponse)
+    }
 }

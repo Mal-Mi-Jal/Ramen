@@ -37,4 +37,11 @@ open class ReviewComment (
     @Column(name = "updated_at")
     var updatedAt: LocalDateTime = LocalDateTime.now()
 
-    )
+    ) {
+    fun updateContent(
+        content: String
+    ){
+        this.content = content
+        this.updatedAt = LocalDateTime.now()
+    }
+}

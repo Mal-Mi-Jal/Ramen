@@ -1,12 +1,15 @@
 package com.ramenlog.ramen.api.shop
 
 import com.ramenlog.ramen.api.application.review.ReviewService
-import com.ramenlog.ramen.api.application.shop.RamenShopService
+import com.ramenlog.ramen.api.application.shop.RestaurantService
+import com.ramenlog.ramen.api.application.visit.VisitHistoryService
 import com.ramenlog.ramen.api.review.dto.RestaurantReviewsResponse
-import com.ramenlog.ramen.api.shop.dto.KakaoPlaceResponse
 import com.ramenlog.ramen.api.shop.dto.NearbyRestaurantsResponse
 import com.ramenlog.ramen.api.shop.dto.RestaurantDetailResponse
+import com.ramenlog.ramen.api.visit.dto.RestaurantVisitHistoryResponse
+import com.ramenlog.ramen.domain.user.User
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -16,9 +19,10 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/restaurants")
-class RamenShopController (
-    private val ramenShopService: RamenShopService,
-    private val reviewService: ReviewService
+class RestaurantController (
+    private val restaurantService: RestaurantService,
+    private val reviewService: ReviewService,
+    private val visitHistoryService: VisitHistoryService
 ){
 
     @GetMapping("/nearby")
@@ -26,7 +30,7 @@ class RamenShopController (
         @RequestParam latitude: String,
         @RequestParam longitude: String
     ): ResponseEntity<NearbyRestaurantsResponse>{
-        val response = ramenShopService.searchNearbyRamenShops(latitude, longitude)
+        val response = restaurantService.searchNearbyRamenShops(latitude, longitude)
 
         return ResponseEntity.ok(response)
     }
@@ -37,7 +41,7 @@ class RamenShopController (
     ): ResponseEntity<RestaurantDetailResponse> {
 
         val response =
-            ramenShopService.getRestaurantDetail(
+            restaurantService.getRestaurantDetail(
                 restaurantId
             )
 
@@ -67,4 +71,26 @@ class RamenShopController (
         return ResponseEntity.ok(response)
     }
 
+    @GetMapping(
+        "/{restaurantId}/visit-history/me"
+    )
+    fun getRestaurantVisitHistory(
+
+        @PathVariable restaurantId: UUID,
+
+        @AuthenticationPrincipal user: User
+
+    ): ResponseEntity<RestaurantVisitHistoryResponse> {
+
+        val response =
+            visitHistoryService
+                .getRestaurantVisitHistory(
+                    restaurantId,
+                    user
+                )
+
+        return ResponseEntity.ok(
+            response
+        )
+    }
 }

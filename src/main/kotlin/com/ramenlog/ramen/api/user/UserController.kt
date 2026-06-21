@@ -1,8 +1,10 @@
 package com.ramenlog.ramen.api.user
 
 import com.ramenlog.ramen.api.application.user.UserService
+import com.ramenlog.ramen.api.application.visit.VisitHistoryService
 import com.ramenlog.ramen.api.user.dto.MyProfileResponse
 import com.ramenlog.ramen.api.user.dto.UpdateProfileRequest
+import com.ramenlog.ramen.api.visit.dto.VisitHistoryResponse
 import com.ramenlog.ramen.domain.user.User
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -10,12 +12,14 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/users")
 class UserController (
-    private val userService: UserService
+    private val userService: UserService,
+    private val visitHistoryService: VisitHistoryService
 ){
     @GetMapping("/me")
     fun getMyProfile(
@@ -44,5 +48,30 @@ class UserController (
 
         return ResponseEntity.ok(response)
     }
+
+    @GetMapping("/me/visit-history")
+    fun getMyVisitHistory(
+
+        @AuthenticationPrincipal user: User,
+
+        @RequestParam(defaultValue = "1")
+        page: Int,
+
+        @RequestParam(defaultValue = "20")
+        size: Int
+
+    ): ResponseEntity<VisitHistoryResponse> {
+
+        val response =
+            visitHistoryService.getMyVisitHistory(
+                user,
+                page,
+                size
+            )
+
+        return ResponseEntity.ok(response)
+    }
+
+
 
 }

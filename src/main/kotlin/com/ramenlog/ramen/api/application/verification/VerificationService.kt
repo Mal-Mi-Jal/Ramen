@@ -17,6 +17,8 @@ import com.ramenlog.ramen.api.verification.dto.VerificationVerifyResponse
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.visit.VerificationStatus
+import com.ramenlog.ramen.domain.visit.VisitHistory
+import com.ramenlog.ramen.domain.visit.VisitHistoryRepository
 import com.ramenlog.ramen.domain.visit.VisitVerification
 import com.ramenlog.ramen.domain.visit.VisitVerificationRepository
 import com.ramenlog.ramen.util.LocationUtils
@@ -34,7 +36,8 @@ class VerificationService (
     private val restaurantRepository: RestaurantRepository,
 
     @Value("\${verification.required-stay-seconds}")
-    private val requiredStaySeconds: Int
+    private val requiredStaySeconds: Int,
+    private val visitHistoryRepository: VisitHistoryRepository
 ){
     fun startVerification(
         user: User,
@@ -191,6 +194,44 @@ class VerificationService (
 
         verification.stayDurationSeconds =
             currentStaySeconds.toInt()
+
+        visitVerificationRepository.save(
+            verification
+        )
+
+        val history =
+            visitHistoryRepository
+                .findByUserIdAndRestaurantId(
+                    user.id!!,
+                    verification.restaurant.id!!
+                )
+
+        if (history == null) {
+
+            visitHistoryRepository.save(
+
+                VisitHistory(
+                    user = user,
+
+                    restaurant =
+                        verification.restaurant,
+
+                    visitVerification =
+                        verification,
+
+                    visitCount = 1,
+
+                    lastVisitedAt =
+                        LocalDateTime.now()
+                )
+            )
+        } else {
+
+            history.visitCount += 1
+
+            history.lastVisitedAt =
+                LocalDateTime.now()
+        }
 
         visitVerificationRepository.save(
             verification

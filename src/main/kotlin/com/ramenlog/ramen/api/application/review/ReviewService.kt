@@ -6,6 +6,7 @@ import com.ramenlog.ramen.api.common.CannotLikeOwnReviewException
 import com.ramenlog.ramen.api.common.EmptyCommentException
 import com.ramenlog.ramen.api.common.InvalidRatingException
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
+import com.ramenlog.ramen.api.common.ReviewCommentNotFoundException
 import com.ramenlog.ramen.api.common.ReviewLikeNotFoundException
 import com.ramenlog.ramen.api.common.ReviewNotFoundException
 import com.ramenlog.ramen.api.common.VerificationRequiredException
@@ -17,6 +18,7 @@ import com.ramenlog.ramen.api.review.dto.CreateCommentRequest
 import com.ramenlog.ramen.api.review.dto.CreateCommentResponse
 import com.ramenlog.ramen.api.review.dto.CreateReviewRequest
 import com.ramenlog.ramen.api.review.dto.CreateReviewResponse
+import com.ramenlog.ramen.api.review.dto.DeleteCommentResponse
 import com.ramenlog.ramen.api.review.dto.DeleteReviewResponse
 import com.ramenlog.ramen.api.review.dto.GetCommentsResponse
 import com.ramenlog.ramen.api.review.dto.PaginationData
@@ -28,6 +30,8 @@ import com.ramenlog.ramen.api.review.dto.ReviewLikeResponse
 import com.ramenlog.ramen.api.review.dto.ReviewPhotoData
 import com.ramenlog.ramen.api.review.dto.ReviewSummary
 import com.ramenlog.ramen.api.review.dto.ReviewUser
+import com.ramenlog.ramen.api.review.dto.UpdateCommentRequest
+import com.ramenlog.ramen.api.review.dto.UpdateCommentResponse
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
 import com.ramenlog.ramen.domain.review.Review
 import com.ramenlog.ramen.domain.review.ReviewCommentRepository
@@ -452,21 +456,32 @@ class ReviewService (
         reviewId: UUID,
         user: User
     ): DeleteReviewResponse {
+
         val review =
             reviewRepository.findById(reviewId)
                 .orElseThrow {
                     ReviewNotFoundException()
                 }
 
-        if (review.user.id != user.id){
-            throw IllegalArgumentException("본인 리뷰만 삭제할 수 있습니다.")
+        if (review.user.id != user.id) {
+            throw IllegalArgumentException(
+                "본인 리뷰만 삭제할 수 있습니다."
+            )
         }
+
+        reviewCommentRepository
+            .deleteByReviewId(reviewId)
+
+        reviewLikeRepository
+            .deleteByReviewId(reviewId)
+
+        reviewPhotoRepository
+            .deleteByReviewId(reviewId)
 
         reviewRepository.delete(review)
 
         return DeleteReviewResponse(
             success = true,
-
             message = "리뷰가 삭제되었습니다."
         )
     }
@@ -674,6 +689,81 @@ class ReviewService (
                                 comments.totalPages
                         )
                 )
+        )
+    }
+
+    @Transactional
+    fun updateComment(
+        reviewId: UUID,
+        commentId: UUID,
+        user: User,
+        request: UpdateCommentRequest
+    ): UpdateCommentResponse {
+
+        val comment =
+            reviewCommentRepository.findById(commentId)
+                .orElseThrow {
+                    ReviewCommentNotFoundException()
+                }
+
+        if (comment.review.id != reviewId) {
+            throw IllegalArgumentException(
+                "해당 리뷰의 댓글이 아닙니다."
+            )
+        }
+
+        if (comment.user.id != user.id) {
+            throw IllegalArgumentException(
+                "본인 댓글만 수정할 수 있습니다."
+            )
+        }
+
+        if (request.content.isBlank()) {
+            throw IllegalArgumentException(
+                "댓글 내용을 입력해주세요."
+            )
+        }
+
+        comment.updateContent(
+            request.content
+        )
+
+        return UpdateCommentResponse(
+            success = true,
+            message = "댓글이 수정되었습니다."
+        )
+    }
+
+    @Transactional
+    fun deleteComment(
+        reviewId: UUID,
+        commentId: UUID,
+        user: User
+    ): DeleteCommentResponse {
+
+        val comment =
+            reviewCommentRepository.findById(commentId)
+                .orElseThrow {
+                    ReviewCommentNotFoundException()
+                }
+
+        if (comment.review.id != reviewId) {
+            throw IllegalArgumentException(
+                "해당 리뷰의 댓글이 아닙니다."
+            )
+        }
+
+        if (comment.user.id != user.id) {
+            throw IllegalArgumentException(
+                "본인 댓글만 삭제할 수 있습니다."
+            )
+        }
+
+        reviewCommentRepository.delete(comment)
+
+        return DeleteCommentResponse(
+            success = true,
+            message = "댓글이 삭제되었습니다."
         )
     }
 
