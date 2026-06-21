@@ -189,7 +189,7 @@ class ReviewService (
                 "likes" ->
                     Sort.by(
                         Sort.Direction.DESC,
-                        "createdAt" // todo: likes count
+                        "like_count"
                     )
 
                 else ->
