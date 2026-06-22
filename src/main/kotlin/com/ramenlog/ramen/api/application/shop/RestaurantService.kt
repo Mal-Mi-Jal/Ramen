@@ -9,6 +9,7 @@ import com.ramenlog.ramen.api.shop.dto.RestaurantDetailResponse
 import com.ramenlog.ramen.api.shop.dto.RestaurantResponse
 import com.ramenlog.ramen.domain.restaurant.Restaurant
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
+import com.ramenlog.ramen.domain.review.ReviewRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -18,7 +19,8 @@ import java.util.UUID
 class RestaurantService (
     @Value("\${kakao.api.key}")
     private val kakaoApiKey: String,
-    private val restaurantRepository: RestaurantRepository
+    private val restaurantRepository: RestaurantRepository,
+    private val reviewRepository: ReviewRepository
 ){
     private val webClient = WebClient.builder()
         .baseUrl("https://dapi.kakao.com")
@@ -86,6 +88,16 @@ class RestaurantService (
                         )
                     )
 
+            val reviewCount =
+                reviewRepository.countByRestaurantId(
+                    savedRestaurant.id!!
+                )
+
+            val averageRating =
+                reviewRepository.getAverageRating(
+                    savedRestaurant.id!!
+                ) ?: 0.0
+
             RestaurantResponse(
                 id = savedRestaurant.id.toString(),
 
@@ -103,9 +115,9 @@ class RestaurantService (
 
                 distanceMeters = place.distance?.toIntOrNull(),
 
-                reviewCount = 0,
+                reviewCount = reviewCount.toInt(),
 
-                averageRating = 0.0
+                averageRating = averageRating
             )
         }
 
@@ -127,6 +139,30 @@ class RestaurantService (
                     IllegalArgumentException("식당을 찾을 수 없습니다.")
                 }
 
+        val reviewCount =
+            reviewRepository.countByRestaurantId(
+                restaurant.id!!
+            )
+
+        val averageRating =
+            reviewRepository.getAverageRating(
+                restaurant.id!!
+            ) ?: 0.0
+
+        val revisitCount =
+            reviewRepository
+                .countByRestaurantIdAndRevisitIntentionTrue(
+                    restaurant.id!!
+                )
+
+        val revisitRate =
+            if (reviewCount == 0L) {
+                0.0
+            } else {
+                revisitCount.toDouble() /
+                        reviewCount.toDouble() * 100
+            }
+
         return RestaurantDetailResponse(
             success = true,
 
@@ -145,11 +181,11 @@ class RestaurantService (
 
                 phone = restaurant.phone,
 
-                reviewCount = 0,
+                reviewCount = reviewCount.toInt(),
 
-                averageRating = 0.0,
+                averageRating = averageRating,
 
-                revisitRate = 0.0
+                revisitRate = revisitRate
             )
         )
     }
