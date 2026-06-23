@@ -49,8 +49,12 @@ class AuthService (
         // 2. 리프레시 토큰 굽기 (14일짜리)
         val refreshToken = jwtProvider.createToken(user.id!!, user.email, jwtProvider.refreshTokenValidityInMilliseconds)
 
-        user.updateRefreshToken(refreshToken)
-        userRepository.saveAndFlush(user)
+        try{
+            user.updateRefreshToken(refreshToken)
+            userRepository.saveAndFlush(user)
+        } catch (e: Exception){
+
+        }
 
         // 3. 가방에 이쁘게 담아서 던지기
         return TokenData(
