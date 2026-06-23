@@ -36,7 +36,7 @@ class AuthService (
         userRepository.save(newUser)
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     fun login(request: LoginRequest): TokenData {
         val user = userRepository.findByEmail(request.email)
             ?: throw IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다.")
@@ -49,12 +49,10 @@ class AuthService (
         // 2. 리프레시 토큰 굽기 (14일짜리)
         val refreshToken = jwtProvider.createToken(user.id!!, user.email, jwtProvider.refreshTokenValidityInMilliseconds)
 
-        try{
-            user.updateRefreshToken(refreshToken)
-            userRepository.saveAndFlush(user)
-        } catch (e: Exception){
 
-        }
+        user.updateRefreshToken(refreshToken)
+        userRepository.saveAndFlush(user)
+
 
         // 3. 가방에 이쁘게 담아서 던지기
         return TokenData(
