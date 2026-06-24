@@ -61,7 +61,7 @@ class VerificationService (
                 restaurant.longitude
             )
 
-        if (distance > 500) {   // test용 500
+        if (distance > 5000){   // test용 5000
             throw OutOfRangeException()
         }
 
@@ -151,7 +151,7 @@ class VerificationService (
                 verification.restaurant.longitude
             )
 
-        if (distance > 500) { // test용 500
+        if (distance > 5000) { // test용 5000
             throw OutOfRangeException()
         }
 
