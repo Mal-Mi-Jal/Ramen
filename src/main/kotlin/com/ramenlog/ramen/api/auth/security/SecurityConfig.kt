@@ -24,6 +24,7 @@ class SecurityConfig (
         val config = CorsConfiguration()
         config.allowedOrigins = listOf(
             "https://ramen-frontend.vercel.app",
+            "https://ramen-production.up.railway.app",
             "http://localhost:3000",  // 로컬 개발용
             "http://localhost:5500"   // VSCode Live Server용
         )
