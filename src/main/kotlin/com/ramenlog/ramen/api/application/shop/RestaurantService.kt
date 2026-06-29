@@ -298,9 +298,12 @@ class RestaurantService (
             // 라멘 관련 업종만
             .filter {
 
-                it.categoryName?.contains("일본식라면") == true
-
-
+                it.categoryName?.contains("일본식라면") == true &&
+                        (
+                                it.placeName.contains(keyword, ignoreCase = true) ||
+                                        it.placeName.replace(" ", "")
+                                            .contains(keyword.replace(" ", ""), ignoreCase = true)
+                                )
 
             }
 
