@@ -224,7 +224,7 @@ class RestaurantService (
                             .queryParam("query", searchKeyword)
                             .queryParam("x", longitude)
                             .queryParam("y", latitude)
-                            .queryParam("radius", 20000)
+                            .queryParam("radius", 10000)
                             .queryParam("sort", "distance")
                             .queryParam("page", page)
                             .build()
