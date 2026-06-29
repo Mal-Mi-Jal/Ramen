@@ -1,6 +1,7 @@
 package com.ramenlog.ramen.api.verification
 
 import com.ramenlog.ramen.api.application.verification.VerificationService
+import com.ramenlog.ramen.api.verification.dto.VerificationCurrentResponse
 import com.ramenlog.ramen.api.verification.dto.VerificationEnterRequest
 import com.ramenlog.ramen.api.verification.dto.VerificationEnterResponse
 import com.ramenlog.ramen.api.verification.dto.VerificationHistoryResponse
@@ -82,7 +83,20 @@ class VerificationController (
         return ResponseEntity.ok(response)
     }
 
+    @GetMapping("/current")
+    fun getCurrentVerification(
 
+        @AuthenticationPrincipal
+        user: User
+
+    ): ResponseEntity<VerificationCurrentResponse>{
+
+        return ResponseEntity.ok(
+
+            verificationService
+                .getCurrentVerification(user)
+        )
+    }
 
 
 }

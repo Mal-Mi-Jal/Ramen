@@ -6,6 +6,8 @@ import com.ramenlog.ramen.api.verification.dto.VerificationEnterResponse
 import com.ramenlog.ramen.api.common.AlreadyPendingException
 import com.ramenlog.ramen.api.common.OutOfRangeException
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
+import com.ramenlog.ramen.api.verification.dto.CurrentVerificationData
+import com.ramenlog.ramen.api.verification.dto.VerificationCurrentResponse
 import com.ramenlog.ramen.api.verification.dto.VerificationError
 import com.ramenlog.ramen.api.verification.dto.VerificationErrorData
 import com.ramenlog.ramen.api.verification.dto.VerificationHistoryData
@@ -65,15 +67,35 @@ class VerificationService (
             throw OutOfRangeException()
         }
 
-        val hasPending =
+        val existing =
             visitVerificationRepository
-                .existsByUserAndStatus(
+                .findByUserAndStatus(
                     user,
                     VerificationStatus.PENDING
                 )
+        if (existing != null) {
 
-        if (hasPending) {
-            throw AlreadyPendingException()
+            return VerificationEnterResponse(
+
+                success = true,
+
+                data = VerificationData(
+
+                    verificationId =
+                        existing.id.toString(),
+
+                    status =
+                        existing.status.name.lowercase(),
+
+                    enteredAt =
+                        existing.enteredAt,
+
+                    requiredStaySeconds =
+                        requiredStaySeconds
+                ),
+
+                message = "이미 진행 중인 방문 인증입니다."
+            )
         }
 
         val now = LocalDateTime.now()
@@ -180,8 +202,10 @@ class VerificationService (
                                 requiredStaySeconds.toLong(),
 
                             remainingSeconds =
-                                requiredStaySeconds.toLong() -
-                                        currentStaySeconds
+                                maxOf(
+                                    0,
+                                    requiredStaySeconds.toLong() - currentStaySeconds
+                                )
                         )
                 )
             )
@@ -336,6 +360,60 @@ class VerificationService (
 
                     totalPages =
                         verificationPage.totalPages
+                )
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getCurrentVerification(
+        user: User
+    ): VerificationCurrentResponse {
+
+        val verification =
+            visitVerificationRepository
+                .findByUserAndStatus(
+                    user,
+                    VerificationStatus.PENDING
+                )
+
+                ?: return VerificationCurrentResponse(
+                    success = true,
+                    data = null
+                )
+
+        val elapsed =
+            Duration.between(
+                verification.enteredAt,
+                LocalDateTime.now()
+            ).seconds
+
+        val remaining =
+            maxOf(
+                0,
+                requiredStaySeconds - elapsed
+            )
+
+        return VerificationCurrentResponse(
+
+            success = true,
+
+            data =
+                CurrentVerificationData(
+
+                    verificationId =
+                        verification.id!!,
+
+                    restaurantId =
+                        verification.restaurant.id!!,
+
+                    status =
+                        verification.status.name.lowercase(),
+
+                    remainingSeconds =
+                        remaining,
+
+                    enteredAt =
+                        verification.enteredAt
                 )
         )
     }
