@@ -194,26 +194,48 @@ class RestaurantService (
         keyword: String
     ): NearbyRestaurantsResponse {
 
-        val response = webClient.get()
-            .uri { uriBuilder ->
-                uriBuilder
-                    .path("/v2/local/search/keyword.json")
-                    .queryParam("query", keyword)
-                    .queryParam("page", 1)
-                    .build()
+        val keywords = listOf(
+            keyword,
+            "$keyword 라멘",
+            "$keyword 일본라멘"
+        )
+
+        val allDocuments = mutableListOf<KakaoPlaceDocument>()
+
+        for (searchKeyword in keywords) {
+
+            val response = webClient.get()
+                .uri { uriBuilder ->
+                    uriBuilder
+                        .path("/v2/local/search/keyword.json")
+                        .queryParam("query", searchKeyword)
+                        .queryParam("page", 1)
+                        .build()
+                }
+                .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
+                .retrieve()
+                .bodyToMono(KakaoPlaceResponse::class.java)
+                .block()
+
+            if (response != null) {
+                allDocuments.addAll(response.documents)
             }
-            .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
-            .retrieve()
-            .bodyToMono(KakaoPlaceResponse::class.java)
-            .block()
+        }
 
-        val documents = response?.documents ?: emptyList()
+        val restaurants = allDocuments
 
-        val restaurants = documents
+            // 중복 제거
+            .distinctBy { it.id }
+
+            // 라멘 관련 업종만
             .filter {
-                it.categoryName?.contains("일본식라면") == true
+
+                it.categoryName?.contains("일본식라면") == true ||
+
+                        it.categoryName?.contains("일식") == true
+
             }
-            .distinctBy { it.placeName }
+
             .map { place ->
 
                 val savedRestaurant =
