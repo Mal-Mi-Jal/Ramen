@@ -10,6 +10,7 @@ import com.ramenlog.ramen.api.shop.dto.RestaurantResponse
 import com.ramenlog.ramen.domain.restaurant.Restaurant
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
 import com.ramenlog.ramen.domain.review.ReviewRepository
+import com.ramenlog.ramen.util.LocationUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -98,6 +99,14 @@ class RestaurantService (
                     savedRestaurant.id!!
                 ) ?: 0.0
 
+            val distance =
+                LocationUtils.calculateDistance(
+                    latitude,
+                    longitude,
+                    savedRestaurant.latitude,
+                    savedRestaurant.longitude
+                ).toInt()
+
             RestaurantResponse(
                 id = savedRestaurant.id.toString(),
 
@@ -113,7 +122,7 @@ class RestaurantService (
 
                 phone = savedRestaurant.phone,
 
-                distanceMeters = place.distance?.toIntOrNull(),
+                distanceMeters = distance,
 
                 reviewCount = reviewCount.toInt(),
 
@@ -202,6 +211,43 @@ class RestaurantService (
                 data = RestaurantData(
                     restaurants = emptyList()
                 )
+            )
+        }
+
+        val dbRestaurants =
+            restaurantRepository.findByNameContainingIgnoreCase(keyword)
+
+        val dbResults = dbRestaurants.map { restaurant ->
+
+            val reviewCount =
+                reviewRepository.countByRestaurantId(
+                    restaurant.id!!
+                )
+
+            val averageRating =
+                reviewRepository.getAverageRating(
+                    restaurant.id!!
+                ) ?: 0.0
+
+            val distance =
+                LocationUtils.calculateDistance(
+                    latitude,
+                    longitude,
+                    restaurant.latitude,
+                    restaurant.longitude
+                ).toInt()
+
+            RestaurantResponse(
+                id = restaurant.id.toString(),
+                kakaoPlaceId = restaurant.kakaoPlaceId,
+                name = restaurant.name,
+                address = restaurant.address,
+                latitude = restaurant.latitude,
+                longitude = restaurant.longitude,
+                phone = restaurant.phone,
+                distanceMeters = distance,
+                reviewCount = reviewCount.toInt(),
+                averageRating = averageRating
             )
         }
 
@@ -302,10 +348,21 @@ class RestaurantService (
                 )
             }
 
+        val mergedRestaurants =
+            (dbResults + restaurants)
+                .distinctBy { it.kakaoPlaceId }
+                .sortedWith(
+                    compareByDescending<RestaurantResponse> {
+                        it.name.contains(keyword, ignoreCase = true)
+                    }.thenBy {
+                        it.distanceMeters ?: Int.MAX_VALUE
+                    }
+                )
+
         return NearbyRestaurantsResponse(
             success = true,
             data = RestaurantData(
-                restaurants = restaurants
+                restaurants = mergedRestaurants
             )
         )
     }

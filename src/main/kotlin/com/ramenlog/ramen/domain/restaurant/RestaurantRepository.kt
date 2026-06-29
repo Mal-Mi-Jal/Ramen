@@ -5,4 +5,5 @@ import java.util.UUID
 
 interface RestaurantRepository : JpaRepository<Restaurant, UUID> {
     fun findByKakaoPlaceId(kakaoPlaceId: String) : Restaurant?
+    fun findByNameContainingIgnoreCase(keyword: String): List<Restaurant>
 }
