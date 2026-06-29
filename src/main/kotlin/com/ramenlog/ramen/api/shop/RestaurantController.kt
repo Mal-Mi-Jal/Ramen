@@ -97,14 +97,25 @@ class RestaurantController (
     @GetMapping("/search")
     fun searchRestaurants(
 
-        @RequestParam keyword: String
+        @RequestParam keyword:String,
 
-    ): ResponseEntity<NearbyRestaurantsResponse> {
+        @RequestParam latitude: Double,
+
+        @RequestParam longitude: Double
+
+    ): ResponseEntity<NearbyRestaurantsResponse>{
 
         return ResponseEntity.ok(
 
-            restaurantService.searchRestaurants(keyword)
+            restaurantService.searchRestaurants(
+
+                keyword,
+                latitude,
+                longitude
+
+            )
 
         )
+
     }
 }

@@ -191,8 +191,19 @@ class RestaurantService (
     }
 
     fun searchRestaurants(
-        keyword: String
+        keyword: String,
+        latitude: Double,
+        longitude: Double
     ): NearbyRestaurantsResponse {
+
+        if (keyword.trim().length < 2) {
+            return NearbyRestaurantsResponse(
+                success = true,
+                data = RestaurantData(
+                    restaurants = emptyList()
+                )
+            )
+        }
 
         val keywords = listOf(
             keyword,
@@ -204,21 +215,32 @@ class RestaurantService (
 
         for (searchKeyword in keywords) {
 
-            val response = webClient.get()
-                .uri { uriBuilder ->
-                    uriBuilder
-                        .path("/v2/local/search/keyword.json")
-                        .queryParam("query", searchKeyword)
-                        .queryParam("page", 1)
-                        .build()
-                }
-                .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
-                .retrieve()
-                .bodyToMono(KakaoPlaceResponse::class.java)
-                .block()
+            for (page in 1..3) {
 
-            if (response != null) {
-                allDocuments.addAll(response.documents)
+                val response = webClient.get()
+                    .uri { uriBuilder ->
+                        uriBuilder
+                            .path("/v2/local/search/keyword.json")
+                            .queryParam("query", searchKeyword)
+                            .queryParam("x", longitude)
+                            .queryParam("y", latitude)
+                            .queryParam("radius", 20000)
+                            .queryParam("sort", "distance")
+                            .queryParam("page", page)
+                            .build()
+                    }
+                    .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
+                    .retrieve()
+                    .bodyToMono(KakaoPlaceResponse::class.java)
+                    .block()
+
+                if (response != null) {
+                    allDocuments.addAll(response.documents)
+
+                    if (response.meta.isEnd) {
+                        break
+                    }
+                }
             }
         }
 
@@ -230,9 +252,9 @@ class RestaurantService (
             // 라멘 관련 업종만
             .filter {
 
-                it.categoryName?.contains("일본식라면") == true ||
+                it.categoryName?.contains("일본식라면") == true
 
-                        it.categoryName?.contains("일식") == true
+
 
             }
 
