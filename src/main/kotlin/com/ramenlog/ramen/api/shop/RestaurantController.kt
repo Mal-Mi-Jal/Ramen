@@ -93,4 +93,18 @@ class RestaurantController (
             response
         )
     }
+
+    @GetMapping("/search")
+    fun searchRestaurants(
+
+        @RequestParam keyword: String
+
+    ): ResponseEntity<NearbyRestaurantsResponse> {
+
+        return ResponseEntity.ok(
+
+            restaurantService.searchRestaurants(keyword)
+
+        )
+    }
 }

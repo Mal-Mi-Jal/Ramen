@@ -189,4 +189,80 @@ class RestaurantService (
             )
         )
     }
+
+    fun searchRestaurants(
+        keyword: String
+    ): NearbyRestaurantsResponse {
+
+        val response = webClient.get()
+            .uri { uriBuilder ->
+                uriBuilder
+                    .path("/v2/local/search/keyword.json")
+                    .queryParam("query", keyword)
+                    .queryParam("page", 1)
+                    .build()
+            }
+            .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
+            .retrieve()
+            .bodyToMono(KakaoPlaceResponse::class.java)
+            .block()
+
+        val documents = response?.documents ?: emptyList()
+
+        val restaurants = documents
+            .filter {
+                it.categoryName?.contains("일본식라면") == true
+            }
+            .distinctBy { it.placeName }
+            .map { place ->
+
+                val savedRestaurant =
+                    restaurantRepository.findByKakaoPlaceId(place.id)
+
+                        ?: restaurantRepository.save(
+                            Restaurant(
+                                kakaoPlaceId = place.id,
+                                name = place.placeName,
+                                address =
+                                    if (place.roadAddressName.isNotBlank())
+                                        place.roadAddressName
+                                    else
+                                        place.addressName,
+                                latitude = place.y.toDouble(),
+                                longitude = place.x.toDouble(),
+                                phone = place.phone
+                            )
+                        )
+
+                val reviewCount =
+                    reviewRepository.countByRestaurantId(
+                        savedRestaurant.id!!
+                    )
+
+                val averageRating =
+                    reviewRepository.getAverageRating(
+                        savedRestaurant.id!!
+                    ) ?: 0.0
+
+                RestaurantResponse(
+                    id = savedRestaurant.id.toString(),
+                    kakaoPlaceId = savedRestaurant.kakaoPlaceId,
+                    name = savedRestaurant.name,
+                    address = savedRestaurant.address,
+                    latitude = savedRestaurant.latitude,
+                    longitude = savedRestaurant.longitude,
+                    phone = savedRestaurant.phone,
+                    distanceMeters = null,
+                    reviewCount = reviewCount.toInt(),
+                    averageRating = averageRating
+                )
+            }
+
+        return NearbyRestaurantsResponse(
+            success = true,
+            data = RestaurantData(
+                restaurants = restaurants
+            )
+        )
+    }
 }
