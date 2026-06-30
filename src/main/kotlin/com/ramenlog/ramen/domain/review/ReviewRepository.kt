@@ -30,4 +30,13 @@ interface ReviewRepository : JpaRepository<Review, UUID> {
     ): Double?
 
     fun existsByVerificationId(verificationId: UUID): Boolean
+
+    fun findByUserId(
+        userId: UUID,
+        pageable: Pageable
+    ): Page<Review>
+
+    fun countByUserId(
+        userId: UUID
+    ): Long
 }
