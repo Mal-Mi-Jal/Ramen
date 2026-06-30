@@ -60,7 +60,8 @@ class RestaurantService (
 
         val filteredDocuments = allDocuments
             .filter {
-                it.categoryName?.contains("일본식라면") == true
+                val lastCategory = it.categoryName?.split(">")?.lastOrNull()?.trim()
+                lastCategory == "일본식라면"
             }
             .distinctBy { it.placeName }
 
