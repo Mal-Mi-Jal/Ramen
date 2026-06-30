@@ -252,11 +252,12 @@ class RestaurantService (
             )
         }
 
-        val keywords = listOf(
-            keyword,
-            "$keyword 라멘",
-            "$keyword 일본라멘"
-        )
+        // 💡 이미 "라멘"이 포함된 검색어는 중복 키워드를 만들지 않음 (불필요한 API 호출 방지)
+        val keywords = if (keyword.contains("라멘")) {
+            listOf(keyword)
+        } else {
+            listOf(keyword, "$keyword 라멘", "$keyword 일본라멘")
+        }
 
         val allDocuments = mutableListOf<KakaoPlaceDocument>()
 
@@ -271,7 +272,6 @@ class RestaurantService (
                             .queryParam("query", searchKeyword)
                             .queryParam("x", longitude)
                             .queryParam("y", latitude)
-                            .queryParam("radius", 10000)
                             .queryParam("sort", "distance")
                             .queryParam("page", page)
                             .build()
@@ -296,16 +296,15 @@ class RestaurantService (
             // 중복 제거
             .distinctBy { it.id }
 
-            // 라멘 관련 업종만
+            // 라멘 관련 업종만 (카테고리 경로의 마지막 분류로 정확히 일치 비교)
             .filter {
-
-                it.categoryName?.contains("일본식라면") == true &&
+                val lastCategory = it.categoryName?.split(">")?.lastOrNull()?.trim()
+                lastCategory == "일본식라면" &&
                         (
                                 it.placeName.contains(keyword, ignoreCase = true) ||
                                         it.placeName.replace(" ", "")
                                             .contains(keyword.replace(" ", ""), ignoreCase = true)
                                 )
-
             }
 
             .map { place ->
@@ -338,6 +337,14 @@ class RestaurantService (
                         savedRestaurant.id!!
                     ) ?: 0.0
 
+                val distance =
+                    LocationUtils.calculateDistance(
+                        latitude,
+                        longitude,
+                        savedRestaurant.latitude,
+                        savedRestaurant.longitude
+                    ).toInt()
+
                 RestaurantResponse(
                     id = savedRestaurant.id.toString(),
                     kakaoPlaceId = savedRestaurant.kakaoPlaceId,
@@ -346,7 +353,7 @@ class RestaurantService (
                     latitude = savedRestaurant.latitude,
                     longitude = savedRestaurant.longitude,
                     phone = savedRestaurant.phone,
-                    distanceMeters = null,
+                    distanceMeters = distance,
                     reviewCount = reviewCount.toInt(),
                     averageRating = averageRating
                 )
