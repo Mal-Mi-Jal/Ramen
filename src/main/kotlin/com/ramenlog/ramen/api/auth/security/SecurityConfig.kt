@@ -57,7 +57,8 @@ class SecurityConfig (
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers("/auth/**").permitAll()
                     // 명세서상 비로그인도 조회 가능한 공개 API
-                    .requestMatchers(HttpMethod.GET, "/restaurants/nearby", "/restaurants/*", "/restaurants/*/reviews").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/restaurants/nearby", "/restaurants/*", "/restaurants/*/reviews"
+                    , "/reviews/*/comments").permitAll()
                     .anyRequest().authenticated()
             }
 
