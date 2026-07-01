@@ -3,6 +3,7 @@ package com.ramenlog.ramen.api.auth
 import com.ramenlog.ramen.api.application.auth.AuthService
 import com.ramenlog.ramen.api.auth.dto.LoginRequest
 import com.ramenlog.ramen.api.auth.dto.LoginResponse
+import com.ramenlog.ramen.api.auth.dto.RefreshRequest
 import com.ramenlog.ramen.api.auth.dto.SignupRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -57,6 +58,20 @@ class AuthController (
             "success" to true,
             "message" to "로그아웃 되었습니다."
         )
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/refresh")
+    fun refresh(
+        @RequestBody request: RefreshRequest
+    ): ResponseEntity<LoginResponse> {
+        val tokenData = authService.refresh(request)
+
+        val response = LoginResponse(
+            success = true,
+            data = tokenData
+        )
+
         return ResponseEntity.ok(response)
     }
 }

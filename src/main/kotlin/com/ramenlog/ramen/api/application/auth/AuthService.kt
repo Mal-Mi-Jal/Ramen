@@ -1,6 +1,7 @@
 package com.ramenlog.ramen.api.application.auth
 
 import com.ramenlog.ramen.api.auth.dto.LoginRequest
+import com.ramenlog.ramen.api.auth.dto.RefreshRequest
 import com.ramenlog.ramen.api.auth.dto.SignupRequest
 import com.ramenlog.ramen.api.auth.dto.TokenData
 import com.ramenlog.ramen.api.auth.security.JwtProvider
@@ -78,5 +79,47 @@ class AuthService (
         // 나중에 Redis 블랙리스트로 구현할 예정
 
         println("${user.nickname}님 로그아웃 완료!")
+    }
+
+    @Transactional
+    fun refresh(request: RefreshRequest): TokenData {
+        // 1. refresh_token에서 이메일 추출
+        val email = try {
+            jwtProvider.getEmailFromToken(request.refresh_token)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("유효하지 않은 refresh token입니다.")
+        }
+
+        // 2. 유저 조회
+        val user = userRepository.findByEmail(email)
+            ?: throw IllegalArgumentException("존재하지 않는 유저입니다.")
+
+        // 3. DB에 저장된 refresh_token과 일치하는지 검증
+        if (user.refreshToken != request.refresh_token) {
+            throw IllegalArgumentException("유효하지 않거나 만료된 refresh token입니다.")
+        }
+
+        // 4. 새 access_token 발급
+        val newAccessToken = jwtProvider.createToken(
+            user.id!!,
+            user.email,
+            jwtProvider.accessTokenValidityInMilliseconds
+        )
+
+        // 5. refresh_token도 새로 발급 (rotation 방식 — 보안 강화)
+        val newRefreshToken = jwtProvider.createToken(
+            user.id!!,
+            user.email,
+            jwtProvider.refreshTokenValidityInMilliseconds
+        )
+
+        user.updateRefreshToken(newRefreshToken)
+        userRepository.saveAndFlush(user)
+
+        return TokenData(
+            access_token = newAccessToken,
+            refresh_token = newRefreshToken,
+            expires_in = jwtProvider.getExpiresInSeconds()
+        )
     }
 }
