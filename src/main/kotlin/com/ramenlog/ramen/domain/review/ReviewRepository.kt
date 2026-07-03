@@ -39,4 +39,6 @@ interface ReviewRepository : JpaRepository<Review, UUID> {
     fun countByUserId(
         userId: UUID
     ): Long
+
+    fun getTotalLikeCountByUserId(userId: UUID): Int
 }

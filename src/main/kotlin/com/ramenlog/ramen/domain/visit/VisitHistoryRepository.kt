@@ -14,4 +14,5 @@ interface VisitHistoryRepository : JpaRepository<VisitHistory, UUID> {
     ): Page<VisitHistory>
 
     fun findByUserIdAndRestaurantId(userId: UUID, restaurantId: UUID): VisitHistory?
+    fun countByUserId(userId: UUID): Long
 }
