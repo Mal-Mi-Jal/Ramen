@@ -4,6 +4,7 @@ import com.ramenlog.ramen.api.application.review.ReviewService
 import com.ramenlog.ramen.api.application.user.UserService
 import com.ramenlog.ramen.api.application.visit.VisitHistoryService
 import com.ramenlog.ramen.api.review.dto.MyReviewsResponse
+import com.ramenlog.ramen.api.review.dto.PendingReviewResponse
 import com.ramenlog.ramen.api.user.dto.MyProfileResponse
 import com.ramenlog.ramen.api.user.dto.UpdateProfileRequest
 import com.ramenlog.ramen.api.visit.dto.VisitHistoryResponse
@@ -95,6 +96,24 @@ class UserController (
             )
 
         return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/me/pending-review")
+    fun getPendingReviews(
+
+        @AuthenticationPrincipal
+        user: User
+
+    ): ResponseEntity<PendingReviewResponse> {
+
+        return ResponseEntity.ok(
+
+            userService.getPendingReviews(
+                user.email
+            )
+
+        )
+
     }
 
 }
