@@ -58,6 +58,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -111,12 +112,23 @@ class ReviewService (
             throw VerificationRequiredException()
         }
 
+        // 이미 이 인증으로 리뷰를 작성한 경우
+        if (verification.reviewedAt != null) {
+            throw AlreadyReviewedException()
+        }
+
+        val verifiedAt =
+            verification.verifiedAt
+                ?: throw VerificationRequiredException()
+
         if (
-            reviewRepository.existsByVerificationId(
-                request.verificationId
+            verifiedAt.isBefore(
+                LocalDateTime.now().minusDays(3)
             )
         ) {
-            throw AlreadyReviewedException()
+            throw IllegalArgumentException(
+                "리뷰 작성 가능 기간이 지났습니다."
+            )
         }
 
         if (request.rating !in 1..5) {
@@ -140,6 +152,9 @@ class ReviewService (
                         request.revisitIntention
                 )
             )
+
+        verification.reviewedAt =
+            LocalDateTime.now()
 
         return CreateReviewResponse(
             success = true,
