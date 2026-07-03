@@ -40,5 +40,10 @@ interface ReviewRepository : JpaRepository<Review, UUID> {
         userId: UUID
     ): Long
 
+    @Query("""
+        select coalesce(sum(r.likeCount), 0)
+        from Review r
+        where r.user.id = :userId
+    """)
     fun getTotalLikeCountByUserId(userId: UUID): Int
 }
