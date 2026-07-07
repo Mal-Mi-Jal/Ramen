@@ -38,6 +38,8 @@ class UserController (
         return ResponseEntity.ok(response)
     }
 
+
+
     @PatchMapping("/me")
     fun updateProfile(
         @AuthenticationPrincipal user: User,
