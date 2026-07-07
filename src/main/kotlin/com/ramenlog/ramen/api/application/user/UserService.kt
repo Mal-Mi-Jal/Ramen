@@ -1,5 +1,6 @@
 package com.ramenlog.ramen.api.application.user
 
+import com.ramenlog.ramen.api.application.verification.VerificationService
 import com.ramenlog.ramen.api.review.dto.PendingReviewData
 import com.ramenlog.ramen.api.review.dto.PendingReviewResponse
 import com.ramenlog.ramen.api.user.dto.MyProfileResponse
@@ -19,7 +20,8 @@ class UserService (
     private val userRepository: UserRepository,
     private val reviewRepository: ReviewRepository,
     private val visitHistoryRepository: VisitHistoryRepository,
-    private val visitVerificationRepository: VisitVerificationRepository
+    private val visitVerificationRepository: VisitVerificationRepository,
+    private val verificationService: VerificationService
 ){
     @Transactional(readOnly=true)
     fun getMyProfile(email: String): MyProfileResponse {
@@ -75,6 +77,15 @@ class UserService (
 
         val now =
             LocalDateTime.now()
+
+        visitVerificationRepository
+            .findByUserIdAndStatusOrderByEnteredAtDesc(
+                user.id!!,
+                VerificationStatus.PENDING
+            )
+            .forEach {
+                verificationService.autoCompleteVerification(it)
+            }
 
         val pending =
 

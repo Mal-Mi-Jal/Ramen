@@ -21,6 +21,12 @@ interface VisitVerificationRepository : JpaRepository<VisitVerification, UUID>{
         status: VerificationStatus
     ): List<VisitVerification>
 
+    @EntityGraph(attributePaths = ["restaurant"])
+    fun findByUserIdAndStatusOrderByEnteredAtDesc(
+        userId: UUID,
+        status: VerificationStatus
+    ): List<VisitVerification>
+
     fun findTopByUserOrderByEnteredAtDesc(
         user: User
     ): VisitVerification?

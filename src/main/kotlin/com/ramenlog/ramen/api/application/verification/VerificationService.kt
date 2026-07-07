@@ -431,7 +431,8 @@ class VerificationService (
         )
     }
 
-    private fun autoCompleteVerification(
+    @Transactional
+     fun autoCompleteVerification(
         verification: VisitVerification
     ): VisitVerification {
 
