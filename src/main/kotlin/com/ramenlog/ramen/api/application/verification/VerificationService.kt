@@ -68,12 +68,25 @@ class VerificationService (
             throw OutOfRangeException()
         }
 
-        val existing =
+        var existing =
             visitVerificationRepository
                 .findByUserAndStatus(
                     user,
                     VerificationStatus.PENDING
                 )
+
+        if (existing != null) {
+
+            autoCompleteVerification(existing)
+
+            existing =
+                visitVerificationRepository
+                    .findByUserAndStatus(
+                        user,
+                        VerificationStatus.PENDING
+                    )
+        }
+
         if (existing != null) {
 
             return VerificationEnterResponse(
@@ -372,13 +385,14 @@ class VerificationService (
 
         val verification =
             visitVerificationRepository
-                .findTopByUserOrderByEnteredAtDesc(user)
+                .findByUserAndStatus(
+                    user,
+                    VerificationStatus.PENDING
+                )
                 ?: return VerificationCurrentResponse(
                     success = true,
                     data = null
                 )
-
-        autoCompleteVerification(verification)
 
         val elapsed =
             Duration.between(
@@ -387,14 +401,10 @@ class VerificationService (
             ).seconds
 
         val remaining =
-            if (verification.status == VerificationStatus.VERIFIED) {
-                0
-            } else {
-                maxOf(
-                    0,
-                    requiredStaySeconds - elapsed
-                )
-            }
+            maxOf(
+                0,
+                requiredStaySeconds - elapsed
+            )
 
         return VerificationCurrentResponse(
 
