@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.text.toLong
 
 @Service
 class VerificationService (
@@ -371,15 +372,13 @@ class VerificationService (
 
         val verification =
             visitVerificationRepository
-                .findByUserAndStatus(
-                    user,
-                    VerificationStatus.PENDING
-                )
-
+                .findTopByUserOrderByEnteredAtDesc(user)
                 ?: return VerificationCurrentResponse(
                     success = true,
                     data = null
                 )
+
+        autoCompleteVerification(verification)
 
         val elapsed =
             Duration.between(
@@ -388,10 +387,14 @@ class VerificationService (
             ).seconds
 
         val remaining =
-            maxOf(
-                0,
-                requiredStaySeconds - elapsed
-            )
+            if (verification.status == VerificationStatus.VERIFIED) {
+                0
+            } else {
+                maxOf(
+                    0,
+                    requiredStaySeconds - elapsed
+                )
+            }
 
         return VerificationCurrentResponse(
 
@@ -418,4 +421,40 @@ class VerificationService (
         )
     }
 
+    private fun autoCompleteVerification(
+        verification: VisitVerification
+    ): VisitVerification {
+
+        if (
+            verification.status == VerificationStatus.PENDING
+        ) {
+
+            val elapsed =
+                Duration.between(
+                    verification.enteredAt,
+                    LocalDateTime.now()
+                ).seconds
+
+            if (elapsed >= requiredStaySeconds) {
+
+                verification.status =
+                    VerificationStatus.VERIFIED
+
+                verification.verifiedAt =
+                    verification.enteredAt.plusSeconds(
+                        requiredStaySeconds.toLong()
+                    )
+
+                verification.stayDurationSeconds =
+                    elapsed.toInt()
+
+                visitVerificationRepository.save(
+                    verification
+                )
+            }
+        }
+
+        return verification
+    }
 }
+

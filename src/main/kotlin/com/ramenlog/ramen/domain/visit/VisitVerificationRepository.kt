@@ -20,4 +20,8 @@ interface VisitVerificationRepository : JpaRepository<VisitVerification, UUID>{
         userId: UUID,
         status: VerificationStatus
     ): List<VisitVerification>
+
+    fun findTopByUserOrderByEnteredAtDesc(
+        user: User
+    ): VisitVerification?
 }
