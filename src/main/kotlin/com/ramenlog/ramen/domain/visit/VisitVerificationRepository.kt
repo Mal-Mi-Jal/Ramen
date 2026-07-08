@@ -15,6 +15,8 @@ interface VisitVerificationRepository : JpaRepository<VisitVerification, UUID>{
 
     fun findByUserAndStatus(user: User, status: VerificationStatus): VisitVerification?
 
+    fun findAllByStatus(status: VerificationStatus): List<VisitVerification>
+
     @EntityGraph(attributePaths = ["restaurant"])
     fun findByUserIdAndStatusOrderByVerifiedAtDesc(
         userId: UUID,
