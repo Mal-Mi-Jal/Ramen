@@ -19,8 +19,8 @@ class VerificationScheduler(
     @Value("\${verification.required-stay-seconds}")
     private val requiredStaySeconds: Int
 ) {
-    // 💡 30초마다 PENDING 인증들을 체크해서 시간 지난 것들을 자동으로 VERIFIED로 변경
-    @Scheduled(fixedDelay = 30000)
+    // 💡 PENDING 인증들을 체크해서 시간 지난 것들을 자동으로 VERIFIED로 변경
+    @Scheduled(fixedDelay = 5000)
     @Transactional
     fun autoCompleteExpiredVerifications() {
         val pendingVerifications =
@@ -55,6 +55,7 @@ class VerificationScheduler(
                 } else {
                     history.visitCount += 1
                     history.lastVisitedAt = now
+                    visitHistoryRepository.save(history)
                 }
             }
         }
