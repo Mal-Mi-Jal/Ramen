@@ -7,9 +7,11 @@ import com.ramenlog.ramen.api.shop.dto.RestaurantData
 import com.ramenlog.ramen.api.shop.dto.RestaurantDetailData
 import com.ramenlog.ramen.api.shop.dto.RestaurantDetailResponse
 import com.ramenlog.ramen.api.shop.dto.RestaurantResponse
+import com.ramenlog.ramen.domain.favorite.FavoriteRestaurantRepository
 import com.ramenlog.ramen.domain.restaurant.Restaurant
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
 import com.ramenlog.ramen.domain.review.ReviewRepository
+import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.util.LocationUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -21,7 +23,8 @@ class RestaurantService (
     @Value("\${kakao.api.key}")
     private val kakaoApiKey: String,
     private val restaurantRepository: RestaurantRepository,
-    private val reviewRepository: ReviewRepository
+    private val reviewRepository: ReviewRepository,
+    private val favoriteRestaurantRepository: FavoriteRestaurantRepository
 ){
     private val webClient = WebClient.builder()
         .baseUrl("https://dapi.kakao.com")
@@ -140,7 +143,8 @@ class RestaurantService (
     }
 
     fun getRestaurantDetail(
-        restaurantId: UUID
+        restaurantId: UUID,
+        user: User?
     ): RestaurantDetailResponse {
 
         val restaurant =
@@ -173,6 +177,16 @@ class RestaurantService (
                         reviewCount.toDouble() * 100
             }
 
+        val isFavorite =
+            if(user == null){
+                false
+            }else{
+                favoriteRestaurantRepository.existsByUserIdAndRestaurantId(
+                    user.id!!,
+                    restaurant.id!!
+                )
+            }
+
         return RestaurantDetailResponse(
             success = true,
 
@@ -195,7 +209,9 @@ class RestaurantService (
 
                 averageRating = averageRating,
 
-                revisitRate = revisitRate
+                revisitRate = revisitRate,
+
+                isFavorite = isFavorite
             )
         )
     }

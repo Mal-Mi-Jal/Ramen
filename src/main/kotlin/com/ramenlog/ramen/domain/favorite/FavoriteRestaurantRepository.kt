@@ -1,5 +1,6 @@
 package com.ramenlog.ramen.domain.favorite
 
+import com.ramenlog.ramen.domain.user.User
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
@@ -26,4 +27,7 @@ interface FavoriteRestaurantRepository : JpaRepository<FavoriteRestaurant, UUID>
     fun countByRestaurantId(
         restaurantId: UUID
     ): Long
+
+
+    fun findByUser(user: User): List<FavoriteRestaurant>
 }

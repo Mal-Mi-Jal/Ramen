@@ -1,8 +1,10 @@
 package com.ramenlog.ramen.api.user
 
+import com.ramenlog.ramen.api.application.favorite.FavoriteService
 import com.ramenlog.ramen.api.application.review.ReviewService
 import com.ramenlog.ramen.api.application.user.UserService
 import com.ramenlog.ramen.api.application.visit.VisitHistoryService
+import com.ramenlog.ramen.api.favorite.dto.FavoriteListResponse
 import com.ramenlog.ramen.api.review.dto.MyReviewsResponse
 import com.ramenlog.ramen.api.review.dto.PendingReviewResponse
 import com.ramenlog.ramen.api.user.dto.MyProfileResponse
@@ -24,6 +26,7 @@ class UserController (
     private val userService: UserService,
     private val visitHistoryService: VisitHistoryService,
     private val reviewService: ReviewService,
+    private val favoriteService: FavoriteService,
 ){
     @GetMapping("/me")
     fun getMyProfile(
@@ -116,6 +119,16 @@ class UserController (
 
         )
 
+    }
+
+    @GetMapping("/me/favorites")
+    fun getMyFavorites(
+        @AuthenticationPrincipal
+        user: User
+    ): FavoriteListResponse {
+        return favoriteService.getMyFavorites(
+            user
+        )
     }
 
 }

@@ -1,6 +1,8 @@
 package com.ramenlog.ramen.api.application.favorite
 
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
+import com.ramenlog.ramen.api.favorite.dto.FavoriteListResponse
+import com.ramenlog.ramen.api.favorite.dto.FavoriteRestaurantDto
 import com.ramenlog.ramen.api.favorite.dto.FavoriteToggleData
 import com.ramenlog.ramen.api.favorite.dto.FavoriteToggleResponse
 import com.ramenlog.ramen.domain.favorite.FavoriteRestaurant
@@ -13,7 +15,7 @@ import java.util.UUID
 
 @Service
 class FavoriteService (
-    private val favoriteRepository : FavoriteRestaurantRepository,
+    private val favoriteRestaurantRepository : FavoriteRestaurantRepository,
     private val restaurantRepository : RestaurantRepository
 ){
     @Transactional
@@ -30,7 +32,7 @@ class FavoriteService (
                 }
 
         val favorite =
-            favoriteRepository
+            favoriteRestaurantRepository
                 .findByUserIdAndRestaurantId(
                     user.id!!,
                     restaurantId
@@ -39,7 +41,7 @@ class FavoriteService (
         val isFavorite =
 
             if (favorite == null) {
-                favoriteRepository.save(
+                favoriteRestaurantRepository.save(
                     FavoriteRestaurant(
                         user = user,
                         restaurant = restaurant
@@ -47,12 +49,12 @@ class FavoriteService (
                 )
                 true
             } else {
-                favoriteRepository.delete(favorite)
+                favoriteRestaurantRepository.delete(favorite)
                 false
             }
 
         val favoriteCount =
-            favoriteRepository
+            favoriteRestaurantRepository
                 .countByRestaurantId(
                     restaurantId
 
@@ -66,28 +68,42 @@ class FavoriteService (
         )
     }
 
-    @Transactional(readOnly = true)
-    fun isFavorite(
-        user: User,
-        restaurantId: UUID
-    ): Boolean {
-
-        return favoriteRepository
-            .existsByUserIdAndRestaurantId(
-                user.id!!,
-                restaurantId
-            )
-    }
 
     @Transactional(readOnly = true)
     fun getMyFavorites(
         user: User
-    ): List<FavoriteRestaurant> {
+    ): FavoriteListResponse {
 
-        return favoriteRepository
-            .findByUserIdOrderByCreatedAtDesc(
-                user.id!!
+        val favorites =
+            favoriteRestaurantRepository
+                .findByUser(user)
+
+        val data = favorites.map { favorite ->
+
+            FavoriteRestaurantDto(
+
+                restaurantId =
+                    favorite.restaurant.id!!,
+
+                restaurantName =
+                    favorite.restaurant.name,
+
+                address =
+                    favorite.restaurant.address,
+
+                thumbnail = null
+
             )
+
+        }
+
+        return FavoriteListResponse(
+
+            success = true,
+
+            data = data
+
+        )
     }
 
 

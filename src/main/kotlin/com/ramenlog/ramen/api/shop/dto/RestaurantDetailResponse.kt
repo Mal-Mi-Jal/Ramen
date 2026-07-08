@@ -18,6 +18,7 @@ data class RestaurantDetailData(
     val latitude: Double,
     val longitude: Double,
     val phone: String?,
+    val isFavorite: Boolean,
 
     @JsonProperty("review_count")
     val reviewCount: Int,
