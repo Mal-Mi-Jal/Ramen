@@ -14,6 +14,7 @@ import com.ramenlog.ramen.domain.review.ReviewRepository
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.util.LocationUtils
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import java.util.UUID
@@ -142,10 +143,26 @@ class RestaurantService (
         )
     }
 
+    private fun currentUserOrNull(): User? {
+
+        val authentication =
+            SecurityContextHolder.getContext().authentication
+
+        if (
+            authentication == null ||
+            !authentication.isAuthenticated
+        ) {
+            return null
+        }
+
+        return authentication.principal as? User
+    }
+
     fun getRestaurantDetail(
-        restaurantId: UUID,
-        user: User?
+        restaurantId: UUID
     ): RestaurantDetailResponse {
+
+        val user = currentUserOrNull()
 
         val restaurant =
             restaurantRepository.findById(restaurantId)
@@ -393,4 +410,6 @@ class RestaurantService (
             )
         )
     }
+
+
 }

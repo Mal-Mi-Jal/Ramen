@@ -41,24 +41,15 @@ class RestaurantController (
 
     @GetMapping("/{restaurantId}")
     fun getRestaurantDetail(
+        @PathVariable restaurantId: UUID
+    ): ResponseEntity<RestaurantDetailResponse> {
 
-        @AuthenticationPrincipal
-        user: User?,
-
-        @PathVariable
-        restaurantId: UUID
-
-    ): ResponseEntity<RestaurantDetailResponse>{
-
-        return ResponseEntity.ok(
-
+        val response =
             restaurantService.getRestaurantDetail(
-                restaurantId,
-                user
+                restaurantId
             )
 
-        )
-
+        return ResponseEntity.ok(response)
     }
 
     @GetMapping("/{restaurantId}/reviews")
