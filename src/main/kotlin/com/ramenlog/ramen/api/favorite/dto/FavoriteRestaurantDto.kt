@@ -10,5 +10,9 @@ data class FavoriteRestaurantDto(
 
     val address: String,
 
-    val thumbnail: String?
+    val thumbnail: String?,
+
+    val averageRating: Double,
+
+    val reviewCount: Int
 )

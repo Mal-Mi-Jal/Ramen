@@ -161,7 +161,6 @@ class RestaurantService (
     fun getRestaurantDetail(
         restaurantId: UUID
     ): RestaurantDetailResponse {
-
         val user = currentUserOrNull()
 
         val restaurant =

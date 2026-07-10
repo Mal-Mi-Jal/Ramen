@@ -8,6 +8,7 @@ import com.ramenlog.ramen.api.favorite.dto.FavoriteToggleResponse
 import com.ramenlog.ramen.domain.favorite.FavoriteRestaurant
 import com.ramenlog.ramen.domain.favorite.FavoriteRestaurantRepository
 import com.ramenlog.ramen.domain.restaurant.RestaurantRepository
+import com.ramenlog.ramen.domain.review.ReviewRepository
 import com.ramenlog.ramen.domain.user.User
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,8 +16,9 @@ import java.util.UUID
 
 @Service
 class FavoriteService (
-    private val favoriteRestaurantRepository : FavoriteRestaurantRepository,
-    private val restaurantRepository : RestaurantRepository
+    private val favoriteRestaurantRepository: FavoriteRestaurantRepository,
+    private val restaurantRepository: RestaurantRepository,
+    private val reviewRepository: ReviewRepository
 ){
     @Transactional
     fun toggleFavorite(
@@ -91,7 +93,19 @@ class FavoriteService (
                 address =
                     favorite.restaurant.address,
 
-                thumbnail = null
+                thumbnail = null,
+
+                averageRating =
+                    reviewRepository
+                        .getAverageRating(
+                            favorite.restaurant.id!!
+                        ) ?: 0.0,
+
+                reviewCount =
+                    reviewRepository
+                        .countByRestaurantId(
+                            favorite.restaurant.id!!
+                        ).toInt()
 
             )
 
