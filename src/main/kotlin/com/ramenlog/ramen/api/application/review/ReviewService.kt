@@ -46,6 +46,7 @@ import com.ramenlog.ramen.api.review.dto.UpdateReviewRequest
 import com.ramenlog.ramen.api.review.dto.UpdateReviewResponse
 import com.ramenlog.ramen.domain.review.ReviewComment
 import com.ramenlog.ramen.domain.review.ReviewLike
+import com.ramenlog.ramen.domain.review.ReviewPhoto
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.visit.VerificationStatus
 import com.ramenlog.ramen.domain.visit.VisitVerificationRepository
@@ -136,6 +137,28 @@ class ReviewService (
                         request.revisitIntention
                 )
             )
+
+        if (request.imageUrl.isNotEmpty()) {
+
+            val photos =
+
+                request.imageUrl.mapIndexed { index, url ->
+
+                    ReviewPhoto(
+
+                        review = review,
+
+                        imageUrl = url,
+
+                        orderIndex = index
+
+                    )
+
+                }
+
+            reviewPhotoRepository.saveAll(photos)
+
+        }
 
         return CreateReviewResponse(
             success = true,
