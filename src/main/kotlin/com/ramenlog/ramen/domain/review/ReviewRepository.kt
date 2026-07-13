@@ -30,4 +30,20 @@ interface ReviewRepository : JpaRepository<Review, UUID> {
     ): Double?
 
     fun existsByVerificationId(verificationId: UUID): Boolean
+
+    fun findByUserId(
+        userId: UUID,
+        pageable: Pageable
+    ): Page<Review>
+
+    fun countByUserId(
+        userId: UUID
+    ): Long
+
+    @Query("""
+        select coalesce(sum(r.likeCount), 0)
+        from Review r
+        where r.user.id = :userId
+    """)
+    fun getTotalLikeCountByUserId(userId: UUID): Int
 }

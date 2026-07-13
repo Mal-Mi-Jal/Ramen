@@ -478,7 +478,38 @@ GET /verifications/me
 | size | int | ❌ | 페이지 크기, 기본값 20 |
 
 ---
+### 진행 중인 방문 인증 조회
+```
+GET /verifications/current
 
+🔒 인증 필요
+Response 200
+{
+  "success": true,
+  "data": {
+    "verification_id": "uuid",
+    "restaurant_id": "uuid",
+    "status": "PENDING",
+    "remaining_seconds": 735,
+    "entered_at": "2025-01-01T12:00:00Z"
+  }
+}
+
+진행 중인 인증이 없으면
+{
+  "success": true,
+  "data": null
+}
+
+또는
+
+{
+  "success": false,
+  "code": "NO_ACTIVE_VERIFICATION",
+  "message": "진행 중인 방문 인증이 없습니다."
+}
+
+```
 ## 5. 리뷰 (Reviews)
 
 ### 리뷰 작성
@@ -659,6 +690,7 @@ POST /reviews/{review_id}/likes
     "like_count": 13
   }
 }
+
 ```
 
 **에러 케이스**

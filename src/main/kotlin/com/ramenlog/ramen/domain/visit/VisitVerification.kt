@@ -58,6 +58,9 @@ open class VisitVerification (
     @Column(name = "verification_type", nullable = false, length = 50)
     var verificationType: String = "gps", // 나중에 receipt
 
+    @Column(name = "reviewed_at")
+    var reviewedAt: LocalDateTime? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 

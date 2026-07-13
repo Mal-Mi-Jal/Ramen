@@ -6,6 +6,8 @@ import com.ramenlog.ramen.api.verification.dto.VerificationEnterResponse
 import com.ramenlog.ramen.api.common.AlreadyPendingException
 import com.ramenlog.ramen.api.common.OutOfRangeException
 import com.ramenlog.ramen.api.common.RestaurantNotFoundException
+import com.ramenlog.ramen.api.verification.dto.CurrentVerificationData
+import com.ramenlog.ramen.api.verification.dto.VerificationCurrentResponse
 import com.ramenlog.ramen.api.verification.dto.VerificationError
 import com.ramenlog.ramen.api.verification.dto.VerificationErrorData
 import com.ramenlog.ramen.api.verification.dto.VerificationHistoryData
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.text.toLong
 
 @Service
 class VerificationService (
@@ -65,15 +68,48 @@ class VerificationService (
             throw OutOfRangeException()
         }
 
-        val hasPending =
+        var existing =
             visitVerificationRepository
-                .existsByUserAndStatus(
+                .findByUserAndStatus(
                     user,
                     VerificationStatus.PENDING
                 )
 
-        if (hasPending) {
-            throw AlreadyPendingException()
+        if (existing != null) {
+
+            autoCompleteVerification(existing)
+
+            existing =
+                visitVerificationRepository
+                    .findByUserAndStatus(
+                        user,
+                        VerificationStatus.PENDING
+                    )
+        }
+
+        if (existing != null) {
+
+            return VerificationEnterResponse(
+
+                success = true,
+
+                data = VerificationData(
+
+                    verificationId =
+                        existing.id.toString(),
+
+                    status =
+                        existing.status.name.lowercase(),
+
+                    enteredAt =
+                        existing.enteredAt,
+
+                    requiredStaySeconds =
+                        requiredStaySeconds
+                ),
+
+                message = "이미 진행 중인 방문 인증입니다."
+            )
         }
 
         val now = LocalDateTime.now()
@@ -180,8 +216,10 @@ class VerificationService (
                                 requiredStaySeconds.toLong(),
 
                             remainingSeconds =
-                                requiredStaySeconds.toLong() -
-                                        currentStaySeconds
+                                maxOf(
+                                    0,
+                                    requiredStaySeconds.toLong() - currentStaySeconds
+                                )
                         )
                 )
             )
@@ -340,4 +378,94 @@ class VerificationService (
         )
     }
 
+    @Transactional(readOnly = true)
+    fun getCurrentVerification(
+        user: User
+    ): VerificationCurrentResponse {
+
+        val verification =
+            visitVerificationRepository
+                .findByUserAndStatus(
+                    user,
+                    VerificationStatus.PENDING
+                )
+                ?: return VerificationCurrentResponse(
+                    success = true,
+                    data = null
+                )
+
+        val elapsed =
+            Duration.between(
+                verification.enteredAt,
+                LocalDateTime.now()
+            ).seconds
+
+        val remaining =
+            maxOf(
+                0,
+                requiredStaySeconds - elapsed
+            )
+
+        return VerificationCurrentResponse(
+
+            success = true,
+
+            data =
+                CurrentVerificationData(
+
+                    verificationId =
+                        verification.id!!,
+
+                    restaurantId =
+                        verification.restaurant.id!!,
+
+                    status =
+                        verification.status.name.lowercase(),
+
+                    remainingSeconds =
+                        remaining,
+
+                    enteredAt =
+                        verification.enteredAt
+                )
+        )
+    }
+
+    @Transactional
+     fun autoCompleteVerification(
+        verification: VisitVerification
+    ): VisitVerification {
+
+        if (
+            verification.status == VerificationStatus.PENDING
+        ) {
+
+            val elapsed =
+                Duration.between(
+                    verification.enteredAt,
+                    LocalDateTime.now()
+                ).seconds
+
+            if (elapsed >= requiredStaySeconds) {
+
+                verification.status =
+                    VerificationStatus.VERIFIED
+
+                verification.verifiedAt =
+                    verification.enteredAt.plusSeconds(
+                        requiredStaySeconds.toLong()
+                    )
+
+                verification.stayDurationSeconds =
+                    elapsed.toInt()
+
+                visitVerificationRepository.save(
+                    verification
+                )
+            }
+        }
+
+        return verification
+    }
 }
+

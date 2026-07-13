@@ -1,7 +1,12 @@
 package com.ramenlog.ramen.api.user
 
+import com.ramenlog.ramen.api.application.favorite.FavoriteService
+import com.ramenlog.ramen.api.application.review.ReviewService
 import com.ramenlog.ramen.api.application.user.UserService
 import com.ramenlog.ramen.api.application.visit.VisitHistoryService
+import com.ramenlog.ramen.api.favorite.dto.FavoriteListResponse
+import com.ramenlog.ramen.api.review.dto.MyReviewsResponse
+import com.ramenlog.ramen.api.review.dto.PendingReviewResponse
 import com.ramenlog.ramen.api.user.dto.MyProfileResponse
 import com.ramenlog.ramen.api.user.dto.UpdateProfileRequest
 import com.ramenlog.ramen.api.visit.dto.VisitHistoryResponse
@@ -19,7 +24,9 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/users")
 class UserController (
     private val userService: UserService,
-    private val visitHistoryService: VisitHistoryService
+    private val visitHistoryService: VisitHistoryService,
+    private val reviewService: ReviewService,
+    private val favoriteService: FavoriteService,
 ){
     @GetMapping("/me")
     fun getMyProfile(
@@ -33,6 +40,8 @@ class UserController (
 
         return ResponseEntity.ok(response)
     }
+
+
 
     @PatchMapping("/me")
     fun updateProfile(
@@ -72,6 +81,54 @@ class UserController (
         return ResponseEntity.ok(response)
     }
 
+    @GetMapping("/me/reviews")
+    fun getMyReviews(
+        @AuthenticationPrincipal user: User,
 
+        @RequestParam(defaultValue = "1")
+        page: Int,
+
+        @RequestParam(defaultValue = "20")
+        size: Int
+
+    ): ResponseEntity<MyReviewsResponse> {
+
+        val response =
+            reviewService.getMyReviews(
+                user.id!!,
+                page,
+                size
+            )
+
+        return ResponseEntity.ok(response)
+    }
+
+    @GetMapping("/me/pending-review")
+    fun getPendingReviews(
+
+        @AuthenticationPrincipal
+        user: User
+
+    ): ResponseEntity<PendingReviewResponse> {
+
+        return ResponseEntity.ok(
+
+            userService.getPendingReviews(
+                user.email
+            )
+
+        )
+
+    }
+
+    @GetMapping("/me/favorites")
+    fun getMyFavorites(
+        @AuthenticationPrincipal
+        user: User
+    ): FavoriteListResponse {
+        return favoriteService.getMyFavorites(
+            user
+        )
+    }
 
 }

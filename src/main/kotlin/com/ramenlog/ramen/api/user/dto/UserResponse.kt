@@ -11,18 +11,21 @@ data class UserProfileData(
     val nickname: String,
     val profile_image_url: String?,
 
+    val review_count: Int,
+    val visit_count: Int,
+    val received_like_count: Int,
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     val created_at: LocalDateTime
 
 )
 
-// 💡 명세서 규격 {"success": true, "data": {...}} 을 맞추기 위한 포장 가방
 data class MyProfileResponse(
     val success: Boolean,
     val data: UserProfileData
 ) {
     companion object {
-        // 엔티티를 DTO로 편하게 변환하기 위한 팩토리 메서드
+
         fun from(user: User): MyProfileResponse {
             return MyProfileResponse(
                 success = true,
@@ -31,6 +34,35 @@ data class MyProfileResponse(
                     email = user.email,
                     nickname = user.nickname,
                     profile_image_url = user.profileImageUrl,
+
+                    review_count = 0,
+                    visit_count = 0,
+                    received_like_count = 0,
+
+                    created_at = user.createdAt
+                )
+            )
+        }
+
+        fun fromWithStats(
+            user: User,
+            reviewCount: Int,
+            visitCount: Int,
+            receivedLikeCount: Int
+        ): MyProfileResponse {
+
+            return MyProfileResponse(
+                success = true,
+                data = UserProfileData(
+                    id = user.id!!,
+                    email = user.email,
+                    nickname = user.nickname,
+                    profile_image_url = user.profileImageUrl,
+
+                    review_count = reviewCount,
+                    visit_count = visitCount,
+                    received_like_count = receivedLikeCount,
+
                     created_at = user.createdAt
                 )
             )

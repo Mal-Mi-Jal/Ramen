@@ -21,6 +21,10 @@ import com.ramenlog.ramen.api.review.dto.CreateReviewResponse
 import com.ramenlog.ramen.api.review.dto.DeleteCommentResponse
 import com.ramenlog.ramen.api.review.dto.DeleteReviewResponse
 import com.ramenlog.ramen.api.review.dto.GetCommentsResponse
+import com.ramenlog.ramen.api.review.dto.MyReviewRestaurant
+import com.ramenlog.ramen.api.review.dto.MyReviewSummary
+import com.ramenlog.ramen.api.review.dto.MyReviewsData
+import com.ramenlog.ramen.api.review.dto.MyReviewsResponse
 import com.ramenlog.ramen.api.review.dto.PaginationData
 import com.ramenlog.ramen.api.review.dto.RestaurantReviewsData
 import com.ramenlog.ramen.api.review.dto.RestaurantReviewsResponse
@@ -55,6 +59,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -108,12 +113,23 @@ class ReviewService (
             throw VerificationRequiredException()
         }
 
+        // 이미 이 인증으로 리뷰를 작성한 경우
+        if (verification.reviewedAt != null) {
+            throw AlreadyReviewedException()
+        }
+
+        val verifiedAt =
+            verification.verifiedAt
+                ?: throw VerificationRequiredException()
+
         if (
-            reviewRepository.existsByVerificationId(
-                request.verificationId
+            verifiedAt.isBefore(
+                LocalDateTime.now().minusDays(3)
             )
         ) {
-            throw AlreadyReviewedException()
+            throw IllegalArgumentException(
+                "리뷰 작성 가능 기간이 지났습니다."
+            )
         }
 
         if (request.rating !in 1..5) {
@@ -159,6 +175,9 @@ class ReviewService (
             reviewPhotoRepository.saveAll(photos)
 
         }
+
+        verification.reviewedAt =
+            LocalDateTime.now()
 
         return CreateReviewResponse(
             success = true,
@@ -787,6 +806,119 @@ class ReviewService (
         return DeleteCommentResponse(
             success = true,
             message = "댓글이 삭제되었습니다."
+        )
+    }
+
+    @Transactional(readOnly = true)
+    fun getMyReviews(
+        userId: UUID,
+        page: Int,
+        size: Int
+    ): MyReviewsResponse {
+        val pageable =
+            PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+            )
+
+        val reviewPage =
+            reviewRepository.findByUserId(
+                userId,
+                pageable
+            )
+
+        val reviews =
+            reviewPage.content.map { review ->
+
+                val photos =
+                    reviewPhotoRepository
+                        .findByReviewIdOrderByOrderIndexAsc(
+                            review.id!!
+                        )
+                        .map { photo ->
+
+                            ReviewPhotoData(
+                                id = photo.id!!,
+
+                                imageUrl =
+                                    photo.imageUrl,
+
+                                orderIndex =
+                                    photo.orderIndex
+                            )
+                        }
+
+                val likeCount =
+                    reviewLikeRepository
+                        .countByReviewId(
+                            review.id!!
+                        )
+
+                val commentCount =
+                    reviewCommentRepository
+                        .countByReviewId(
+                            review.id!!
+                        )
+
+                MyReviewSummary(
+                    id = review.id!!,
+
+                    restaurant =
+                        MyReviewRestaurant(
+                            id =
+                                review.restaurant.id!!,
+
+                            name =
+                                review.restaurant.name,
+
+                            address =
+                                review.restaurant.address
+                        ),
+
+                    rating =
+                        review.rating,
+
+                    content =
+                        review.content,
+
+                    revisitIntention =
+                        review.revisitIntention,
+
+                    likeCount =
+                        likeCount,
+
+                    photos =
+                        photos,
+
+                    commentCount =
+                        commentCount,
+
+                    createdAt =
+                        review.createdAt
+                )
+            }
+
+        return MyReviewsResponse(
+            success = true,
+
+            data =
+                MyReviewsData(
+                    reviews = reviews,
+
+                    pagination =
+                        PaginationData(
+                            total =
+                                reviewPage.totalElements,
+
+                            page = page,
+
+                            size = size,
+
+                            totalPages =
+                                reviewPage.totalPages
+                        )
+                )
         )
     }
 
