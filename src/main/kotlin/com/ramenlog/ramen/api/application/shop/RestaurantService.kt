@@ -32,47 +32,43 @@ class RestaurantService (
         .build()
 
     fun searchNearbyRamenShops(latitude: Double, longitude: Double): NearbyRestaurantsResponse {
+        val searchKeywords = listOf("라멘", "라면", "ramen", "일본라면")
         val allDocuments = mutableListOf<KakaoPlaceDocument>()
 
-        for(page in 1..3){
+        for (keyword in searchKeywords) {
+            for (page in 1..3) {
+                val response = webClient.get()
+                    .uri { uriBuilder ->
+                        uriBuilder
+                            .path("/v2/local/search/keyword.json")
+                            .queryParam("query", keyword)
+                            .queryParam("x", longitude.toString())
+                            .queryParam("y", latitude.toString())
+                            .queryParam("radius", 20000)
+                            .queryParam("sort", "distance")
+                            .queryParam("page", page)
+                            .build()
+                    }
+                    .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
+                    .retrieve()
+                    .bodyToMono(KakaoPlaceResponse::class.java)
+                    .block()
 
-            val response = webClient.get()
-                .uri { uriBuilder ->
-                    uriBuilder
-                        .path("/v2/local/search/keyword.json")
-                        .queryParam("query", "라멘")
-                        .queryParam("x", longitude.toString())
-                        .queryParam("y", latitude.toString())
-                        .queryParam("radius", 20000)
-                        .queryParam("sort", "distance")
-                        .queryParam("page" , page)
-                        .build()
-                }
-                .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
-                .retrieve()
-                .bodyToMono(KakaoPlaceResponse::class.java)
-                .block()
-
-            if(response == null) continue
-
-            allDocuments.addAll(response.documents)
-
-            if(response.meta.isEnd) {
-                break
+                if (response == null) continue
+                allDocuments.addAll(response.documents)
+                if (response.meta.isEnd) break
             }
         }
 
-        println("카카오 API 총 문서 수: ${allDocuments.size}")
-        allDocuments.forEach { println("${it.placeName} | ${it.categoryName}") }
-
         val filteredDocuments = allDocuments
             .filter {
-                val lastCategory = it.categoryName?.split(">")?.lastOrNull()?.trim()
-                lastCategory == "일본식라면"
+                val category = it.categoryName ?: ""
+                category.contains("일본식라면") ||
+                        category.contains("라멘") ||
+                        (category.contains("일식") && it.placeName.contains("라멘", ignoreCase = true)) ||
+                        (category.contains("일식") && it.placeName.contains("라면", ignoreCase = true))
             }
-            .distinctBy { it.placeName }
-
-        println("필터링 후 문서 수: ${filteredDocuments.size}")
+            .distinctBy { it.id }
 
         val restaurants = filteredDocuments.map { place ->
 
