@@ -55,10 +55,15 @@ class RestaurantService (
                     .block()
 
                 if (response == null) continue
+                println("키워드: $keyword, 페이지: $page, 결과: ${response.documents.size}개")
+                response.documents.forEach { println("  ${it.placeName} | ${it.categoryName}") }
                 allDocuments.addAll(response.documents)
                 if (response.meta.isEnd) break
             }
         }
+
+        println("전체 문서 수: ${allDocuments.size}")
+        println("중복 제거 후: ${allDocuments.distinctBy { it.id }.size}")
 
         val filteredDocuments = allDocuments
             .filter {
