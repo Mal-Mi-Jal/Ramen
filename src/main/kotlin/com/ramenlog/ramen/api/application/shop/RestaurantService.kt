@@ -32,6 +32,9 @@ class RestaurantService (
         .build()
 
     fun searchNearbyRamenShops(latitude: Double, longitude: Double): NearbyRestaurantsResponse {
+        println("========== GPS ==========")
+        println("현재 위치 : $latitude , $longitude")
+        println("=========================")
         val searchKeywords = listOf("라멘", "라면", "ramen", "일본라면")
         val allDocuments = mutableListOf<KakaoPlaceDocument>()
 
@@ -117,6 +120,8 @@ class RestaurantService (
                     savedRestaurant.latitude,
                     savedRestaurant.longitude
                 ).toInt()
+
+            println("${savedRestaurant.name} -> ${distance}m")
 
             RestaurantResponse(
                 id = savedRestaurant.id.toString(),
