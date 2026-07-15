@@ -31,151 +31,211 @@ class RestaurantService (
         .baseUrl("https://dapi.kakao.com")
         .build()
 
-    fun searchNearbyRamenShops(latitude: Double, longitude: Double): NearbyRestaurantsResponse {
-        println("========== GPS ==========")
-        println("현재 위치 : $latitude , $longitude")
-        println("=========================")
-        val searchKeywords = listOf("라멘", "라면", "ramen", "일본라면")
-        val allDocuments = mutableListOf<KakaoPlaceDocument>()
+    fun searchNearbyRamenShops(
+        latitude: Double,
+        longitude: Double
+    ): NearbyRestaurantsResponse {
 
+        val searchKeywords =
+            listOf(
+                "라멘",
+                "라면",
+                "ramen",
+                "일본라면"
+            )
+
+        val allDocuments =
+            mutableListOf<KakaoPlaceDocument>()
+
+        // -------------------------------
+        // 1. 카카오에서 최신 라멘집 검색
+        // -------------------------------
         for (keyword in searchKeywords) {
+
             for (page in 1..3) {
-                val response = webClient.get()
-                    .uri { uriBuilder ->
-                        uriBuilder
-                            .path("/v2/local/search/keyword.json")
-                            .queryParam("query", keyword)
-                            .queryParam("x", longitude.toString())
-                            .queryParam("y", latitude.toString())
-                            .queryParam("radius", 20000)
-                            .queryParam("sort", "distance")
-                            .queryParam("page", page)
-                            .build()
-                    }
-                    .header("Authorization", "KakaoAK ${kakaoApiKey.trim()}")
-                    .retrieve()
-                    .bodyToMono(KakaoPlaceResponse::class.java)
-                    .block()
+
+                val response =
+                    webClient.get()
+                        .uri { uriBuilder ->
+
+                            uriBuilder
+                                .path("/v2/local/search/keyword.json")
+                                .queryParam("query", keyword)
+                                .queryParam("x", longitude)
+                                .queryParam("y", latitude)
+                                .queryParam("radius", 20000)
+                                .queryParam("sort", "distance")
+                                .queryParam("page", page)
+                                .build()
+
+                        }
+                        .header(
+                            "Authorization",
+                            "KakaoAK ${kakaoApiKey.trim()}"
+                        )
+                        .retrieve()
+                        .bodyToMono(KakaoPlaceResponse::class.java)
+                        .block()
 
                 if (response == null) continue
-                println("키워드: $keyword, 페이지: $page, 결과: ${response.documents.size}개")
-                response.documents.forEach { println("  ${it.placeName} | ${it.categoryName}") }
+
                 allDocuments.addAll(response.documents)
+
                 if (response.meta.isEnd) break
             }
         }
 
-        println("전체 문서 수: ${allDocuments.size}")
-        println("중복 제거 후: ${allDocuments.distinctBy { it.id }.size}")
+        // -------------------------------
+        // 2. 라멘집만 필터
+        // -------------------------------
+        val filteredDocuments =
+            allDocuments
+                .filter {
 
-        println("========== 나니요리 검색 ==========")
+                    val category =
+                        it.categoryName ?: ""
 
-        allDocuments.forEach { place ->
+                    category.contains("일본식라면") ||
+                            category.contains("라멘") ||
+                            (
+                                    category.contains("일식") &&
+                                            it.placeName.contains("라멘")
+                                    ) ||
+                            (
+                                    category.contains("일식") &&
+                                            it.placeName.contains("라면")
+                                    )
 
-            if (place.placeName.contains("나니")) {
+                }
+                .distinctBy { it.id }
 
-                println("이름 : ${place.placeName}")
-                println("카테고리 : ${place.categoryName}")
-                println("주소 : ${place.addressName}")
-                println("----------------------")
-            }
+        // -------------------------------
+        // 3. DB 저장 (신규만)
+        // -------------------------------
+        filteredDocuments.forEach { place ->
 
-        }
+            restaurantRepository.findByKakaoPlaceId(place.id)
 
-        println("==============================")
+                ?: restaurantRepository.save(
 
-        val filteredDocuments = allDocuments
-            .filter {
-                val category = it.categoryName ?: ""
-                category.contains("일본식라면") ||
-                        category.contains("라멘") ||
-                        (category.contains("일식") && it.placeName.contains("라멘", ignoreCase = true)) ||
-                        (category.contains("일식") && it.placeName.contains("라면", ignoreCase = true))
-            }
-            .distinctBy { it.id }
+                    Restaurant(
 
-        println("========== FILTER ==========")
+                        kakaoPlaceId = place.id,
 
-        filteredDocuments.forEach {
-            println(it.placeName)
-        }
+                        name = place.placeName,
 
-        println("============================")
+                        address =
+                            if (place.roadAddressName.isNotBlank())
+                                place.roadAddressName
+                            else
+                                place.addressName,
 
-        val restaurants = filteredDocuments.map { place ->
+                        latitude = place.y.toDouble(),
 
-            val savedRestaurant =
-                restaurantRepository.findByKakaoPlaceId(place.id)
+                        longitude = place.x.toDouble(),
 
-                    ?: restaurantRepository.save(
-                        Restaurant(
-                            kakaoPlaceId = place.id,
+                        phone = place.phone
 
-                            name = place.placeName,
-
-                            address =
-                                if (place.roadAddressName.isNotBlank())
-                                    place.roadAddressName
-                                else
-                                    place.addressName,
-
-                            latitude = place.y.toDouble(),
-
-                            longitude = place.x.toDouble(),
-
-                            phone = place.phone
-                        )
                     )
 
-            val reviewCount =
-                reviewRepository.countByRestaurantId(
-                    savedRestaurant.id!!
                 )
 
-            val averageRating =
-                reviewRepository.getAverageRating(
-                    savedRestaurant.id!!
-                ) ?: 0.0
-
-            val distance =
-                LocationUtils.calculateDistance(
-                    latitude,
-                    longitude,
-                    savedRestaurant.latitude,
-                    savedRestaurant.longitude
-                ).toInt()
-
-            println("${savedRestaurant.name} -> ${distance}m")
-
-            RestaurantResponse(
-                id = savedRestaurant.id.toString(),
-
-                kakaoPlaceId = savedRestaurant.kakaoPlaceId,
-
-                name = savedRestaurant.name,
-
-                address = savedRestaurant.address,
-
-                latitude = savedRestaurant.latitude,
-
-                longitude = savedRestaurant.longitude,
-
-                phone = savedRestaurant.phone,
-
-                distanceMeters = distance,
-
-                reviewCount = reviewCount.toInt(),
-
-                averageRating = averageRating
-            )
         }
 
+        // -------------------------------
+        // 4. 이제부터는 DB 기준!!
+        // -------------------------------
+        val restaurants =
+            restaurantRepository
+                .findAll()
+                .map { restaurant ->
+
+                    val distance =
+                        LocationUtils.calculateDistance(
+                            latitude,
+                            longitude,
+                            restaurant.latitude,
+                            restaurant.longitude
+                        )
+
+                    Pair(
+                        restaurant,
+                        distance
+                    )
+
+                }
+
+                // 20km 이내
+                .filter {
+
+                    it.second <= 20000
+
+                }
+
+                // 거리순
+                .sortedBy {
+
+                    it.second
+
+                }
+
+                .map { (restaurant, distance) ->
+
+                    val reviewCount =
+                        reviewRepository.countByRestaurantId(
+                            restaurant.id!!
+                        )
+
+                    val averageRating =
+                        reviewRepository.getAverageRating(
+                            restaurant.id!!
+                        ) ?: 0.0
+
+                    RestaurantResponse(
+
+                        id =
+                            restaurant.id.toString(),
+
+                        kakaoPlaceId =
+                            restaurant.kakaoPlaceId,
+
+                        name =
+                            restaurant.name,
+
+                        address =
+                            restaurant.address,
+
+                        latitude =
+                            restaurant.latitude,
+
+                        longitude =
+                            restaurant.longitude,
+
+                        phone =
+                            restaurant.phone,
+
+                        distanceMeters =
+                            distance.toInt(),
+
+                        reviewCount =
+                            reviewCount.toInt(),
+
+                        averageRating =
+                            averageRating
+
+                    )
+
+                }
 
         return NearbyRestaurantsResponse(
+
             success = true,
-            data = RestaurantData(
-                restaurants = restaurants
-            )
+
+            data =
+                RestaurantData(
+                    restaurants = restaurants
+                )
+
         )
     }
 
