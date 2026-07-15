@@ -78,6 +78,14 @@ class RestaurantService (
             }
             .distinctBy { it.id }
 
+        println("========== FILTER ==========")
+
+        filteredDocuments.forEach {
+            println(it.placeName)
+        }
+
+        println("============================")
+
         val restaurants = filteredDocuments.map { place ->
 
             val savedRestaurant =
