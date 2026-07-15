@@ -36,118 +36,11 @@ class RestaurantService (
         longitude: Double
     ): NearbyRestaurantsResponse {
 
-        val searchKeywords =
-            listOf(
-                "라멘",
-                "라면",
-                "ramen",
-                "일본라면"
-            )
-
-        val allDocuments =
-            mutableListOf<KakaoPlaceDocument>()
-
-        // -------------------------------
-        // 1. 카카오에서 최신 라멘집 검색
-        // -------------------------------
-        for (keyword in searchKeywords) {
-
-            for (page in 1..3) {
-
-                val response =
-                    webClient.get()
-                        .uri { uriBuilder ->
-
-                            uriBuilder
-                                .path("/v2/local/search/keyword.json")
-                                .queryParam("query", keyword)
-                                .queryParam("x", longitude)
-                                .queryParam("y", latitude)
-                                .queryParam("radius", 20000)
-                                .queryParam("sort", "distance")
-                                .queryParam("page", page)
-                                .build()
-
-                        }
-                        .header(
-                            "Authorization",
-                            "KakaoAK ${kakaoApiKey.trim()}"
-                        )
-                        .retrieve()
-                        .bodyToMono(KakaoPlaceResponse::class.java)
-                        .block()
-
-                if (response == null) continue
-
-                allDocuments.addAll(response.documents)
-
-                if (response.meta.isEnd) break
-            }
-        }
-
-        // -------------------------------
-        // 2. 라멘집만 필터
-        // -------------------------------
-        val filteredDocuments =
-            allDocuments
-                .filter {
-
-                    val category =
-                        it.categoryName ?: ""
-
-                    category.contains("일본식라면") ||
-                            category.contains("라멘") ||
-                            (
-                                    category.contains("일식") &&
-                                            it.placeName.contains("라멘")
-                                    ) ||
-                            (
-                                    category.contains("일식") &&
-                                            it.placeName.contains("라면")
-                                    )
-
-                }
-                .distinctBy { it.id }
-
-        // -------------------------------
-        // 3. DB 저장 (신규만)
-        // -------------------------------
-        filteredDocuments.forEach { place ->
-
-            restaurantRepository.findByKakaoPlaceId(place.id)
-
-                ?: restaurantRepository.save(
-
-                    Restaurant(
-
-                        kakaoPlaceId = place.id,
-
-                        name = place.placeName,
-
-                        address =
-                            if (place.roadAddressName.isNotBlank())
-                                place.roadAddressName
-                            else
-                                place.addressName,
-
-                        latitude = place.y.toDouble(),
-
-                        longitude = place.x.toDouble(),
-
-                        phone = place.phone
-
-                    )
-
-                )
-
-        }
-
-        // -------------------------------
-        // 4. 이제부터는 DB 기준!!
-        // -------------------------------
         val restaurants =
-            restaurantRepository
-                .findAll()
+            restaurantRepository.findAll()
+
+        val result =
+            restaurants
                 .map { restaurant ->
 
                     val distance =
@@ -158,26 +51,21 @@ class RestaurantService (
                             restaurant.longitude
                         )
 
-                    Pair(
-                        restaurant,
-                        distance
-                    )
-
+                    Pair(restaurant, distance)
                 }
 
-                // 20km 이내
+                // 2km 안쪽만
                 .filter {
-
-                    it.second <= 20000
-
+                    it.second <= 2000
                 }
 
-                // 거리순
+                // 가까운 순
                 .sortedBy {
-
                     it.second
-
                 }
+
+                // 최대 20개만
+                .take(20)
 
                 .map { (restaurant, distance) ->
 
@@ -192,50 +80,33 @@ class RestaurantService (
                         ) ?: 0.0
 
                     RestaurantResponse(
+                        id = restaurant.id.toString(),
 
-                        id =
-                            restaurant.id.toString(),
+                        kakaoPlaceId = restaurant.kakaoPlaceId,
 
-                        kakaoPlaceId =
-                            restaurant.kakaoPlaceId,
+                        name = restaurant.name,
 
-                        name =
-                            restaurant.name,
+                        address = restaurant.address,
 
-                        address =
-                            restaurant.address,
+                        latitude = restaurant.latitude,
 
-                        latitude =
-                            restaurant.latitude,
+                        longitude = restaurant.longitude,
 
-                        longitude =
-                            restaurant.longitude,
+                        phone = restaurant.phone,
 
-                        phone =
-                            restaurant.phone,
+                        distanceMeters = distance.toInt(),
 
-                        distanceMeters =
-                            distance.toInt(),
+                        reviewCount = reviewCount.toInt(),
 
-                        reviewCount =
-                            reviewCount.toInt(),
-
-                        averageRating =
-                            averageRating
-
+                        averageRating = averageRating
                     )
-
                 }
 
         return NearbyRestaurantsResponse(
-
             success = true,
-
-            data =
-                RestaurantData(
-                    restaurants = restaurants
-                )
-
+            data = RestaurantData(
+                restaurants = result
+            )
         )
     }
 
