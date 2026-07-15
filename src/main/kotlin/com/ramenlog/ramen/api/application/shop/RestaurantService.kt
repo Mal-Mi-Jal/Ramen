@@ -68,6 +68,22 @@ class RestaurantService (
         println("전체 문서 수: ${allDocuments.size}")
         println("중복 제거 후: ${allDocuments.distinctBy { it.id }.size}")
 
+        println("========== 나니요리 검색 ==========")
+
+        allDocuments.forEach { place ->
+
+            if (place.placeName.contains("나니")) {
+
+                println("이름 : ${place.placeName}")
+                println("카테고리 : ${place.categoryName}")
+                println("주소 : ${place.addressName}")
+                println("----------------------")
+            }
+
+        }
+
+        println("==============================")
+
         val filteredDocuments = allDocuments
             .filter {
                 val category = it.categoryName ?: ""
