@@ -63,6 +63,7 @@ class RestaurantService (
         }
 
         println("카카오 API 총 문서 수: ${allDocuments.size}")
+        allDocuments.forEach { println("${it.placeName} | ${it.categoryName}") }
 
         val filteredDocuments = allDocuments
             .filter {
