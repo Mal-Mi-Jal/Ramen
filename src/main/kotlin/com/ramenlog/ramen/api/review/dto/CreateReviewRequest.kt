@@ -15,6 +15,9 @@ data class CreateReviewRequest (
     val content: String?,
 
     @JsonProperty("revisit_intention")
-    val revisitIntention: Boolean
+    val revisitIntention: Boolean,
+
+    @JsonProperty("image_url")
+    val imageUrl : List<String> = emptyList()
 
 )
