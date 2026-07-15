@@ -36,76 +36,63 @@ class RestaurantService (
         longitude: Double
     ): NearbyRestaurantsResponse {
 
-        val restaurants =
-            restaurantRepository.findAll()
+        // DB에 저장된 모든 라멘집 조회
+        val restaurants = restaurantRepository.findAll()
 
-        val result =
-            restaurants
-                .map { restaurant ->
+            // 거리 계산
+            .map { restaurant ->
 
-                    val distance =
-                        LocationUtils.calculateDistance(
-                            latitude,
-                            longitude,
-                            restaurant.latitude,
-                            restaurant.longitude
-                        )
-
-                    Pair(restaurant, distance)
-                }
-
-                // 2km 안쪽만
-                .filter {
-                    it.second <= 2000
-                }
-
-                // 가까운 순
-                .sortedBy {
-                    it.second
-                }
-
-                // 최대 20개만
-                .take(20)
-
-                .map { (restaurant, distance) ->
-
-                    val reviewCount =
-                        reviewRepository.countByRestaurantId(
-                            restaurant.id!!
-                        )
-
-                    val averageRating =
-                        reviewRepository.getAverageRating(
-                            restaurant.id!!
-                        ) ?: 0.0
-
-                    RestaurantResponse(
-                        id = restaurant.id.toString(),
-
-                        kakaoPlaceId = restaurant.kakaoPlaceId,
-
-                        name = restaurant.name,
-
-                        address = restaurant.address,
-
-                        latitude = restaurant.latitude,
-
-                        longitude = restaurant.longitude,
-
-                        phone = restaurant.phone,
-
-                        distanceMeters = distance.toInt(),
-
-                        reviewCount = reviewCount.toInt(),
-
-                        averageRating = averageRating
+                val distance =
+                    LocationUtils.calculateDistance(
+                        latitude,
+                        longitude,
+                        restaurant.latitude,
+                        restaurant.longitude
                     )
-                }
+
+                Pair(restaurant, distance)
+            }
+
+            // 20km 이내만
+            .filter { it.second <= 20000 }
+
+            // 가까운 순
+            .sortedBy { it.second }
+
+            // 최대 30개만
+            .take(30)
+
+            // Response 변환
+            .map { (restaurant, distance) ->
+
+                val reviewCount =
+                    reviewRepository.countByRestaurantId(
+                        restaurant.id!!
+                    )
+
+                val averageRating =
+                    reviewRepository.getAverageRating(
+                        restaurant.id!!
+                    ) ?: 0.0
+
+                RestaurantResponse(
+                    id = restaurant.id.toString(),
+                    kakaoPlaceId = restaurant.kakaoPlaceId,
+                    name = restaurant.name,
+                    address = restaurant.address,
+                    latitude = restaurant.latitude,
+                    longitude = restaurant.longitude,
+                    phone = restaurant.phone,
+                    distanceMeters = distance.toInt(),
+                    reviewCount = reviewCount.toInt(),
+                    averageRating = averageRating
+                )
+            }
 
         return NearbyRestaurantsResponse(
             success = true,
             data = RestaurantData(
-                restaurants = result
+                restaurants = restaurants
             )
         )
     }
