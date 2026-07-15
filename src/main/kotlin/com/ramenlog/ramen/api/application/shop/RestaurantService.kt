@@ -62,12 +62,16 @@ class RestaurantService (
             }
         }
 
+        println("카카오 API 총 문서 수: ${allDocuments.size}")
+
         val filteredDocuments = allDocuments
             .filter {
                 val lastCategory = it.categoryName?.split(">")?.lastOrNull()?.trim()
                 lastCategory == "일본식라면"
             }
             .distinctBy { it.placeName }
+
+        println("필터링 후 문서 수: ${filteredDocuments.size}")
 
         val restaurants = filteredDocuments.map { place ->
 
@@ -134,6 +138,7 @@ class RestaurantService (
                 averageRating = averageRating
             )
         }
+
 
         return NearbyRestaurantsResponse(
             success = true,
