@@ -40,7 +40,10 @@ class VerificationService (
 
     @Value("\${verification.required-stay-seconds}")
     private val requiredStaySeconds: Int,
-    private val visitHistoryRepository: VisitHistoryRepository
+    private val visitHistoryRepository: VisitHistoryRepository,
+
+    @Value("\${verification.radius-meters}")
+    private val radiusMeters: Double
 ){
     fun startVerification(
         user: User,
@@ -64,7 +67,7 @@ class VerificationService (
                 restaurant.longitude
             )
 
-        if (distance > 5000){   // test용 5000
+        if (distance > radiusMeters){
             throw OutOfRangeException()
         }
 
@@ -187,7 +190,7 @@ class VerificationService (
                 verification.restaurant.longitude
             )
 
-        if (distance > 5000) { // test용 5000
+        if (distance > radiusMeters) {
             throw OutOfRangeException()
         }
 

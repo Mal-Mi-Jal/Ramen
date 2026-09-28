@@ -30,4 +30,5 @@ jwt:
   secret: ${JWT_SECRET}
 
 verification:
-  required-stay-seconds: 30
+  required-stay-seconds: ${VERIFICATION_REQUIRED_STAY_SECONDS:1200}
+  radius-meters: ${VERIFICATION_RADIUS_METERS:50}

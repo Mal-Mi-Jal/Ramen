@@ -27,7 +27,7 @@ import java.util.Optional
 import java.util.UUID
 
 /**
- * 방문 인증 로직(GPS 반경 5000m, 체류시간 requiredStaySeconds) 경계값 테스트.
+ * 방문 인증 로직(GPS 반경 radiusMeters, 체류시간 requiredStaySeconds) 경계값 테스트.
  */
 @ExtendWith(MockitoExtension::class)
 class VerificationServiceTest {
@@ -43,10 +43,11 @@ class VerificationServiceTest {
 
     private lateinit var verificationService: VerificationService
 
-    private val requiredStaySeconds = 30 // application.yml의 verification.required-stay-seconds와 동일하게
+    private val requiredStaySeconds = 30 // 운영 기본값(1200초)보다 짧게 둔 테스트용 값
 
     private lateinit var user: User
     private lateinit var restaurant: Restaurant
+    private val radiusMeters = 50.0
 
     @BeforeEach
     fun setUp() {
@@ -54,7 +55,8 @@ class VerificationServiceTest {
             visitVerificationRepository,
             restaurantRepository,
             requiredStaySeconds,
-            visitHistoryRepository
+            visitHistoryRepository,
+            radiusMeters
         )
         user = User(id = UUID.randomUUID(), email = "test@ramenlog.com", passwordHash = "x", nickname = "말미잘")
         restaurant = Restaurant(
@@ -75,11 +77,11 @@ class VerificationServiceTest {
     // ---------- 반경(distance) 경계값 ----------
 
     @Test
-    fun `반경 5000m를 초과하면 OutOfRangeException이 발생한다`() {
+    fun `반경을 크게 벗어나면 OutOfRangeException이 발생한다`() {
         given(restaurantRepository.findById(any())).willReturn(Optional.of(restaurant))
         // OutOfRangeException이 findByUserAndStatus 호출 전에 던져지므로 그 스텁은 불필요
 
-        // 서울(37.5665, 126.9780) 기준으로 5000m를 훌쩍 넘는 좌표
+        // 서울(37.5665, 126.9780) 기준으로 반경을 훌쩍 넘는(수 km) 좌표
         val request = VerificationEnterRequest(
             restaurantId = restaurant.id!!,
             latitude = 37.60,
@@ -92,7 +94,7 @@ class VerificationServiceTest {
     }
 
     @Test
-    fun `반경 5000m 이내면 방문 인증이 정상 시작된다`() {
+    fun `가게와 같은 위치면 방문 인증이 정상 시작된다`() {
         given(restaurantRepository.findById(any())).willReturn(Optional.of(restaurant))
         given(visitVerificationRepository.findByUserAndStatus(any(), any())).willReturn(null)
         given(visitVerificationRepository.save(any())).willAnswer { it.arguments[0] }
@@ -172,6 +174,59 @@ class VerificationServiceTest {
         )
 
         assertThrows(IllegalArgumentException::class.java) {
+            verificationService.verifyVerification(UUID.randomUUID(), user, request)
+        }
+    }
+
+    // ---------- 반경 경계값 (radiusMeters = 50m) ----------
+
+    @Test
+    fun `가게에서 약 40m 떨어진 곳은 반경 안이라 인증이 시작된다`() {
+        given(restaurantRepository.findById(any())).willReturn(Optional.of(restaurant))
+        given(visitVerificationRepository.findByUserAndStatus(any(), any())).willReturn(null)
+
+        val request = VerificationEnterRequest(
+            restaurantId = restaurant.id!!,
+            latitude = restaurant.latitude + 0.00036, // 약 40m 북쪽
+            longitude = restaurant.longitude
+        )
+
+        val response = verificationService.startVerification(user, request)
+
+        assertTrue(response.success)
+    }
+
+    @Test
+    fun `가게에서 약 60m 떨어진 곳은 반경 밖이라 인증을 시작할 수 없다`() {
+        given(restaurantRepository.findById(any())).willReturn(Optional.of(restaurant))
+
+        val request = VerificationEnterRequest(
+            restaurantId = restaurant.id!!,
+            latitude = restaurant.latitude + 0.00054, // 약 60m 북쪽
+            longitude = restaurant.longitude
+        )
+
+        assertThrows(OutOfRangeException::class.java) {
+            verificationService.startVerification(user, request)
+        }
+    }
+
+    @Test
+    fun `인증 완료 요청도 반경 밖(약 60m)에서는 거부된다`() {
+        val verification = VisitVerification(
+            user = user,
+            restaurant = restaurant,
+            enteredAt = LocalDateTime.now().minusSeconds((requiredStaySeconds + 1).toLong()),
+            status = VerificationStatus.PENDING
+        )
+        given(visitVerificationRepository.findById(any())).willReturn(Optional.of(verification))
+
+        val request = VerificationVerifyRequest(
+            latitude = restaurant.latitude + 0.00054, // 약 60m 북쪽
+            longitude = restaurant.longitude
+        )
+
+        assertThrows(OutOfRangeException::class.java) {
             verificationService.verifyVerification(UUID.randomUUID(), user, request)
         }
     }
