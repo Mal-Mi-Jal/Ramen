@@ -29,6 +29,19 @@ interface ReviewRepository : JpaRepository<Review, UUID> {
         restaurantId: UUID
     ): Double?
 
+    // 여러 가게의 리뷰 수와 평균 별점을 쿼리 한 번으로 모아 온다 (리뷰가 없는 가게는 결과에 없음)
+    @Query("""
+        select r.restaurant.id as restaurantId,
+               count(r) as reviewCount,
+               avg(r.rating) as averageRating
+        from Review r
+        where r.restaurant.id in :restaurantIds
+        group by r.restaurant.id
+    """)
+    fun getReviewStatsByRestaurantIds(
+        restaurantIds: Collection<UUID>
+    ): List<RestaurantReviewStats>
+
     fun existsByVerificationId(verificationId: UUID): Boolean
 
     fun findByUserId(
