@@ -37,7 +37,7 @@ class RestaurantService (
     ): NearbyRestaurantsResponse {
 
         // DB에 저장된 모든 라멘집 조회
-        val restaurants = restaurantRepository.findAll()
+        val nearby = restaurantRepository.findAll()
 
             // 거리 계산
             .map { restaurant ->
@@ -62,18 +62,22 @@ class RestaurantService (
             // 최대 30개만
             .take(30)
 
+        // 리뷰 수·평균 별점을 가게마다 따로 묻지 않고(30곳 × 2번) 한 번에 모아 온다
+        val statsById = if (nearby.isEmpty()) {
+            emptyMap()
+        } else {
+            reviewRepository
+                .getReviewStatsByRestaurantIds(nearby.map { it.first.id!! })
+                .associateBy { it.restaurantId }
+        }
+
+        val restaurants = nearby
             // Response 변환
             .map { (restaurant, distance) ->
 
-                val reviewCount =
-                    reviewRepository.countByRestaurantId(
-                        restaurant.id!!
-                    )
-
-                val averageRating =
-                    reviewRepository.getAverageRating(
-                        restaurant.id!!
-                    ) ?: 0.0
+                val stats = statsById[restaurant.id]
+                val reviewCount = stats?.reviewCount ?: 0L
+                val averageRating = stats?.averageRating ?: 0.0
 
                 RestaurantResponse(
                     id = restaurant.id.toString(),

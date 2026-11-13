@@ -46,6 +46,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testAnnotationProcessor("org.projectlombok:lombok")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testRuntimeOnly("com.h2database:h2") // 쿼리 수 측정 테스트용 메모리 DB (운영에는 안 들어감)
 
 
 
