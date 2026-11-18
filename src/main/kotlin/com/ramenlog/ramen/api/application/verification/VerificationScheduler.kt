@@ -32,10 +32,14 @@ class VerificationScheduler(
             val elapsed = Duration.between(verification.enteredAt, now).seconds
 
             if (elapsed >= requiredStaySeconds) {
-                verification.status = VerificationStatus.VERIFIED
-                verification.verifiedAt = verification.enteredAt.plusSeconds(requiredStaySeconds.toLong())
-                verification.stayDurationSeconds = elapsed.toInt()
-                visitVerificationRepository.save(verification)
+                // 서버가 여러 대면 같은 PENDING을 동시에 읽을 수 있다.
+                // 조건부 UPDATE로 바꾸고, 내가 바꾼 경우(1행)에만 방문 기록을 올린다.
+                val updated = visitVerificationRepository.completeIfPending(
+                    id = verification.id!!,
+                    verifiedAt = verification.enteredAt.plusSeconds(requiredStaySeconds.toLong()),
+                    staySeconds = elapsed.toInt(),
+                )
+                if (updated == 0) return@forEach // 다른 서버가 먼저 완료함
 
                 // 방문 기록 업데이트
                 val history = visitHistoryRepository.findByUserIdAndRestaurantId(
