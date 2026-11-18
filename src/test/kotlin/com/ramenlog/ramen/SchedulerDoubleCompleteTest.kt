@@ -1,6 +1,7 @@
 package com.ramenlog.ramen
 
 import com.ramenlog.ramen.api.application.verification.VerificationScheduler
+import com.ramenlog.ramen.api.application.verification.VisitCompletion
 import com.ramenlog.ramen.domain.restaurant.Restaurant
 import com.ramenlog.ramen.domain.user.User
 import com.ramenlog.ramen.domain.visit.VerificationStatus
@@ -81,9 +82,10 @@ class SchedulerDoubleCompleteTest {
 
         val bRead = CountDownLatch(1)
         val aCommitted = CountDownLatch(1)
-        val serverA = VerificationScheduler(verificationRepository, historyRepository, requiredStaySeconds)
+        val serverA = VerificationScheduler(verificationRepository, VisitCompletion(verificationRepository, historyRepository, requiredStaySeconds))
         val serverB = VerificationScheduler(
-            PausingRepository(verificationRepository, bRead, aCommitted), historyRepository, requiredStaySeconds,
+            PausingRepository(verificationRepository, bRead, aCommitted),
+            VisitCompletion(verificationRepository, historyRepository, requiredStaySeconds),
         )
 
         // 직접 만든 객체라 @Transactional 프록시가 없으므로, 실제 스케줄러처럼 한 번 실행 = 트랜잭션 하나로 감쌈

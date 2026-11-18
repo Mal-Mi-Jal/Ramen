@@ -43,8 +43,12 @@ class VerificationService (
     private val visitHistoryRepository: VisitHistoryRepository,
 
     @Value("\${verification.radius-meters}")
-    private val radiusMeters: Double
+    private val radiusMeters: Double,
+
+    private val visitCompletion: VisitCompletion,
 ){
+    // 끝난 예전 인증 정리 + 새 인증 저장을 한 트랜잭션으로 (하나가 실패하면 둘 다 되돌림)
+    @Transactional
     fun startVerification(
         user: User,
         request: VerificationEnterRequest
@@ -80,7 +84,7 @@ class VerificationService (
 
         if (existing != null) {
 
-            autoCompleteVerification(existing)
+            visitCompletion.completeIfExpired(existing)
 
             existing =
                 visitVerificationRepository
@@ -434,41 +438,12 @@ class VerificationService (
         )
     }
 
+    /** 다른 서비스(UserService)에서 쓰는 입구. 실제 처리는 VisitCompletion 한 곳에서 한다. */
     @Transactional
-     fun autoCompleteVerification(
+    fun autoCompleteVerification(
         verification: VisitVerification
     ): VisitVerification {
-
-        if (
-            verification.status == VerificationStatus.PENDING
-        ) {
-
-            val elapsed =
-                Duration.between(
-                    verification.enteredAt,
-                    LocalDateTime.now()
-                ).seconds
-
-            if (elapsed >= requiredStaySeconds) {
-
-                verification.status =
-                    VerificationStatus.VERIFIED
-
-                verification.verifiedAt =
-                    verification.enteredAt.plusSeconds(
-                        requiredStaySeconds.toLong()
-                    )
-
-                verification.stayDurationSeconds =
-                    elapsed.toInt()
-
-                visitVerificationRepository.save(
-                    verification
-                )
-            }
-        }
-
+        visitCompletion.completeIfExpired(verification)
         return verification
     }
 }
-
