@@ -46,9 +46,9 @@ class AuthService (
             throw IllegalArgumentException("이메일 또는 비밀번호가 일치하지 않습니다.")
         }
 
-        val accessToken = jwtProvider.createToken(user.id!!, user.email, jwtProvider.accessTokenValidityInMilliseconds)
+        val accessToken = jwtProvider.createAccessToken(user.id!!, user.email)
         // 2. 리프레시 토큰 굽기 (14일짜리)
-        val refreshToken = jwtProvider.createToken(user.id!!, user.email, jwtProvider.refreshTokenValidityInMilliseconds)
+        val refreshToken = jwtProvider.createRefreshToken(user.id!!, user.email)
 
 
         user.updateRefreshToken(refreshToken)
@@ -65,7 +65,7 @@ class AuthService (
 
     @Transactional
     fun logout(accessToken: String){
-        val email = jwtProvider.getEmailFromToken(accessToken)
+        val email = jwtProvider.getEmailFromAccessToken(accessToken)
 
         val user = userRepository.findByEmail(email)
             ?: throw IllegalArgumentException("존재하지 않는 유저입니다.")
@@ -85,7 +85,7 @@ class AuthService (
     fun refresh(request: RefreshRequest): TokenData {
         // 1. refresh_token에서 이메일 추출
         val email = try {
-            jwtProvider.getEmailFromToken(request.refresh_token)
+            jwtProvider.getEmailFromRefreshToken(request.refresh_token)
         } catch (e: Exception) {
             throw IllegalArgumentException("유효하지 않은 refresh token입니다.")
         }
@@ -100,18 +100,10 @@ class AuthService (
         }
 
         // 4. 새 access_token 발급
-        val newAccessToken = jwtProvider.createToken(
-            user.id!!,
-            user.email,
-            jwtProvider.accessTokenValidityInMilliseconds
-        )
+        val newAccessToken = jwtProvider.createAccessToken(user.id!!, user.email)
 
         // 5. refresh_token도 새로 발급 (rotation 방식 — 보안 강화)
-        val newRefreshToken = jwtProvider.createToken(
-            user.id!!,
-            user.email,
-            jwtProvider.refreshTokenValidityInMilliseconds
-        )
+        val newRefreshToken = jwtProvider.createRefreshToken(user.id!!, user.email)
 
         user.updateRefreshToken(newRefreshToken)
         userRepository.saveAndFlush(user)

@@ -38,9 +38,6 @@ class AuthServiceTest {
 
     private lateinit var user: User
 
-    private val accessTokenValidity = 3_600_000L
-    private val refreshTokenValidity = 1_209_600_000L
-
     @BeforeEach
     fun setUp() {
         user = User(
@@ -58,10 +55,8 @@ class AuthServiceTest {
 
         given(userRepository.findByEmail(request.email)).willReturn(user)
         given(passwordEncoder.matches(request.password, user.passwordHash)).willReturn(true)
-        given(jwtProvider.accessTokenValidityInMilliseconds).willReturn(accessTokenValidity)
-        given(jwtProvider.refreshTokenValidityInMilliseconds).willReturn(refreshTokenValidity)
-        given(jwtProvider.createToken(user.id!!, user.email, accessTokenValidity)).willReturn("access-token")
-        given(jwtProvider.createToken(user.id!!, user.email, refreshTokenValidity)).willReturn("refresh-token")
+        given(jwtProvider.createAccessToken(user.id!!, user.email)).willReturn("access-token")
+        given(jwtProvider.createRefreshToken(user.id!!, user.email)).willReturn("refresh-token")
         given(jwtProvider.getExpiresInSeconds()).willReturn(3600L)
 
         // when

@@ -30,7 +30,7 @@ class JwtAuthenticationFilter(
 
             try {
                 val userId =
-                    jwtProvider.getUserIdFromToken(token)
+                    jwtProvider.getUserIdFromAccessToken(token) // refresh 토큰이면 예외 → 로그인 안 됨
 
                 val user =
                     userRepository.findById(userId)
