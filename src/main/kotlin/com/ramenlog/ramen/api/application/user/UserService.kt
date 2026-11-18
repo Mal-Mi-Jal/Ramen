@@ -66,7 +66,8 @@ class UserService (
         return MyProfileResponse.from(user)
     }
 
-    @Transactional(readOnly = true)
+    // 읽기 전용이면 안 됨: 시간 지난 PENDING을 여기서 완료(UPDATE)하고 방문 기록도 남긴다
+    @Transactional
     fun getPendingReviews(
         email: String
     ): PendingReviewResponse {

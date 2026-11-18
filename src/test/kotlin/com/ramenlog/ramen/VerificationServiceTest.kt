@@ -56,7 +56,8 @@ class VerificationServiceTest {
             restaurantRepository,
             requiredStaySeconds,
             visitHistoryRepository,
-            radiusMeters
+            radiusMeters,
+            VisitCompletion(visitVerificationRepository, visitHistoryRepository, requiredStaySeconds)
         )
         user = User(id = UUID.randomUUID(), email = "test@ramenlog.com", passwordHash = "x", nickname = "말미잘")
         restaurant = Restaurant(
