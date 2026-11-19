@@ -25,7 +25,7 @@
 | 인증 | JWT (JJWT) Access / Refresh Token, BCrypt |
 | DB | PostgreSQL (Supabase) |
 | 외부 API | Kakao Local API (WebClient) |
-| 테스트 | JUnit 5, Mockito |
+| 테스트 | JUnit 5, Mockito, H2 (JPA·트랜잭션 통합 테스트) |
 | 배포 | Docker 멀티스테이지 빌드, Railway (프론트엔드는 Vercel) |
 
 <br>
@@ -51,7 +51,7 @@ api/
 ├── verification/    # 방문 인증 컨트롤러
 ├── review/          # 리뷰·댓글·추천 컨트롤러
 ├── user/ favorite/ visit/
-├── application/     # 서비스 계층 (도메인별 *Service, VerificationScheduler)
+├── application/     # 서비스 계층 (도메인별 *Service, VerificationScheduler, VisitCompletion)
 └── common/          # GlobalExceptionHandler, 도메인 예외
 domain/              # 엔티티 + JPA Repository (user, restaurant, visit, review, favorite)
 util/LocationUtils   # 하버사인 거리 계산
@@ -71,6 +71,7 @@ POST /verifications/enter (위도·경도)
    │
    ├─ POST /verifications/{id}/verify  : 위치를 다시 확인 + 20분 경과 → VERIFIED
    └─ VerificationScheduler (@Scheduled, 5초마다) : 20분 지난 PENDING → VERIFIED + 방문 기록 누적
+                                                    (조건부 UPDATE로 서버가 여러 대여도 한 번만)
    ▼
  VERIFIED → 리뷰 작성 가능
 ```
@@ -78,16 +79,20 @@ POST /verifications/enter (위도·경도)
 - **하버사인 공식**: 위도가 높을수록 경도 1°의 길이가 줄어들어 평면 계산은 오차가 생깁니다. 구 위의 최단 거리로 계산했습니다 (`LocationUtils.calculateDistance`).
 - **체류 시간은 서버 기준**: 진입 시각을 서버가 기록하고 그 기준으로 계산해서, 클라이언트 타이머를 조작해도 체류 시간이 줄지 않습니다.
 - **기준값 외부화**: 반경 50m, 체류 1200초를 `application.yml`에서 환경 변수로 바꿀 수 있습니다 (`VERIFICATION_RADIUS_METERS`, `VERIFICATION_REQUIRED_STAY_SECONDS`).
+- **한 번만 완료**: 자동 완료는 `VisitCompletion` 한 곳에서 `UPDATE … WHERE status = 'PENDING'` 조건부 업데이트로 처리하고, 바뀐 행이 1일 때만 방문 기록을 올립니다. 서버 두 대의 스케줄러가 같은 인증을 동시에 집어도 방문은 한 번만 기록됩니다.
+- **트랜잭션 경계**: 새 인증 시작(`startVerification`)은 "끝난 예전 인증 정리 + 새 인증 저장"을 한 트랜잭션으로 묶어, 하나가 실패하면 둘 다 되돌립니다.
 
 ### 2. 라멘집만 골라내는 카카오 검색
 
 - 카카오 로컬 API는 "라면"으로 검색하면 분식집·굿즈샵까지 섞여 나옵니다. 실제 응답의 카테고리를 확인해서 **카테고리 경로의 마지막 분류가 정확히 "일본식라면"** 이고 **가게 이름에 검색어가 포함된** 곳만 남깁니다.
 - 검색어를 확장(`○○`, `○○ 라멘`, `○○ 일본라면`)해 조회하고, 마지막 페이지(`is_end`)면 더 부르지 않습니다.
 - 찾은 가게는 DB에 저장해서, **주변 라멘집 조회는 외부 API 없이** DB만으로 처리합니다.
+- 주변 가게 30곳의 리뷰 수·평균 별점은 `IN (...) GROUP BY` 집계 쿼리 한 번으로 가져옵니다 (가게마다 따로 조회하던 61번 → 2번).
 
 ### 3. 인증 · 보안
 
 - Spring Security + JWT 필터(`OncePerRequestFilter`)로 세션 없이(stateless) 인증합니다. 조회 API만 공개하고 나머지는 인증이 필요합니다.
+- 토큰에 종류(`type`: access / refresh)를 넣어, 필터는 access 토큰만, 재발급(`/auth/refresh`)은 refresh 토큰만 받습니다.
 - Refresh Token은 DB에 저장하고 재발급할 때마다 교체합니다. 비밀번호는 BCrypt로 저장합니다.
 - DB 접속 정보, JWT 비밀키, 카카오 키는 모두 환경 변수로 받고, 비밀값에는 기본값을 두지 않아 빠지면 시작부터 실패합니다.
 
@@ -99,18 +104,24 @@ POST /verifications/enter (위도·경도)
 
 ## 🧪 테스트
 
-JUnit 5 + Mockito로 서비스 계층 단위 테스트 **11개** (스프링·DB 없이 약 1초).
+테스트 **19개**: 서비스 단위 테스트 11개(스프링·DB 없이 약 1초) + 문제를 재현하려고 추가한 테스트 8개.
 
-- `VerificationServiceTest` (8개): 반경 **안(약 40m)·밖(약 60m)**, 체류 시간 **기준 1초 전후**의 경계값 테스트, 완료 요청 시 위치 재확인
-- `AuthServiceTest` (3개): 로그인 성공, 비밀번호 오류, 없는 계정
+| 테스트 | 개수 | 무엇을 확인하나 |
+|---|---|---|
+| `VerificationServiceTest` | 8 | 반경 **안(약 40m)·밖(약 60m)**, 체류 시간 **기준 1초 전후** 경계값, 완료 요청 시 위치 재확인 |
+| `AuthServiceTest` | 3 | 로그인 성공, 비밀번호 오류, 없는 계정 |
+| `NearbyQueryCountTest` | 1 | H2 + Hibernate 통계로 주변 가게 조회의 **실행된 SQL 수** (61 → 2)와 집계 값이 그대로인지 |
+| `SchedulerDoubleCompleteTest` | 1 | 서버 2대의 스케줄러가 같은 인증을 완료해도 방문 기록은 1번 (실행 순서를 고정해 재현) |
+| `JwtTokenTypeTest` | 4 | 진짜 `JwtProvider` + 필터로: refresh 토큰으로는 API 로그인 불가, 재발급에 access 토큰 불가, `type` 없는 옛 토큰 거부 |
+| `StartVerificationTransactionTest` | 2 | 진짜 Spring 빈(트랜잭션 프록시)으로: 새 인증 저장이 실패하면 예전 인증 완료도 되돌림, 자동 완료 시 방문 기록 남김 |
 
-> 경계값 테스트를 추가하다가, 기존 테스트(거리 0m만 검사)가 놓친 **설정값 누락 버그**(완료 단계에 하드코딩된 반경이 남아 있었음)를 찾아 고쳤습니다.
+> 경계값 테스트를 추가하다가, 기존 테스트(거리 0m만 검사)가 놓친 **설정값 누락 버그**(완료 단계에 하드코딩된 반경이 남아 있었음)를 찾아 고쳤습니다. 아래 개선 이력의 네 가지도 모두 **고치기 전 코드에서 실패하는 테스트를 먼저 만든 뒤** 고쳤습니다.
 
 ```bash
-./gradlew test --tests "*ServiceTest"
+./gradlew test --tests "*ServiceTest" --tests "*QueryCountTest" --tests "*DoubleCompleteTest" --tests "*TokenTypeTest" --tests "*TransactionTest"
 ```
 
-(`RamenApplicationTests`는 전체 컨텍스트를 띄우는 테스트라 DB가 필요합니다.)
+(`RamenApplicationTests`는 전체 컨텍스트를 띄우는 테스트라 PostgreSQL이 필요합니다. 나머지는 DB 없이 돌아갑니다.)
 
 <br>
 
@@ -151,18 +162,29 @@ docker run -p 8080:8080 -e DB_URL=... -e DB_USERNAME=... -e DB_PASSWORD=... -e J
 
 <br>
 
-## ⚠️ 알려진 한계와 개선 계획
+## 🔧 개선 이력
 
-직접 코드를 다시 점검하면서 찾은 문제들입니다.
+배포 뒤 코드를 다시 점검하며 찾은 문제를, 테스트로 먼저 재현하고 PR 하나씩 고쳤습니다.
+
+| PR | 문제 | 해결 | 확인 |
+|---|---|---|---|
+| [#1](https://github.com/Mal-Mi-Jal/Ramen/pull/1) | 주변 가게 30곳마다 리뷰 수·평균을 따로 조회 (연관관계가 없어 Fetch Join으로는 안 되는 구조) | `IN (...) GROUP BY` 집계 한 번 | 쿼리 **61 → 2**, 값 동일 |
+| [#2](https://github.com/Mal-Mi-Jal/Ramen/pull/2) | 서버 2대의 스케줄러가 같은 PENDING을 각자 완료 → 방문 기록 중복 | 조건부 UPDATE, 바뀐 행이 1일 때만 기록 | visitCount **2 → 1** |
+| [#3](https://github.com/Mal-Mi-Jal/Ramen/pull/3) | access·refresh가 만료 시간만 달라 refresh 토큰으로도 API 통과 | `type` 클레임, 필터는 access만 / 재발급은 refresh만 | refresh로 로그인 → 거부 |
+| [#4](https://github.com/Mal-Mi-Jal/Ramen/pull/4) | `@Transactional` 자기 호출로 예전 인증 정리와 새 인증 저장이 따로 커밋, 자동 완료 로직이 두 벌이라 한쪽은 방문 기록 누락 | 바깥 메서드에 트랜잭션, 완료 로직을 `VisitCompletion` 빈 하나로 통합 | 저장 실패 시 함께 롤백, 기록 누락 해결 |
+
+<br>
+
+## ⚠️ 남은 한계와 개선 계획
 
 | 문제 | 현재 동작 | 개선 방향 |
 |---|---|---|
 | 스케줄러 자동 완료가 위치를 확인하지 않음 | 진입 후 바로 떠나도 20분이 지나면 VERIFIED | 주기적 위치 확인 또는 완료 시점 재검증 필수화, 장기적으로 영수증 OCR 인증 |
 | 진입 거리를 클라이언트가 보낸 좌표로 계산 | GPS 좌표를 조작하면 반경 검사를 통과할 수 있음 | 위치 이력 패턴 검사, 영수증 인증 |
 | 여러 예외가 `IllegalArgumentException` | 권한 없음·없는 리소스·중복이 모두 400 | `ErrorCode` enum + 공통 예외로 403/404/409 구분, `Exception` 처리기(500) 추가 |
-| 주변 라멘집 조회의 N+1 | `findAll()`로 가게 전체를 읽고, 상위 30곳마다 리뷰 수·평점을 따로 조회(최대 61쿼리) | 위경도 범위 조건 + 인덱스, `IN (...) GROUP BY` 집계 쿼리 한 번 |
-| Access / Refresh 토큰 구분 없음 | 두 토큰이 만료 시간만 다르고 필터가 종류를 확인하지 않음 | `type` 클레임을 넣고 필터는 Access만 허용, 로그아웃 시 블랙리스트(Redis) |
-| `@Transactional` 내부 호출 | `startVerification`이 같은 클래스의 트랜잭션 메서드를 호출해 트랜잭션이 적용되지 않음 | 바깥 메서드에 트랜잭션 적용 또는 별도 빈으로 분리 |
+| 주변 조회가 가게 전체를 읽음 | 쿼리 수는 줄였지만 `findAll()` 후 메모리에서 거리 계산 | 위경도 범위 조건 + 인덱스로 DB에서 먼저 거르기 |
+| 로그아웃 후에도 access 토큰 유효 | 로그아웃은 DB의 refresh 토큰만 지움 | 짧은 access 만료 또는 Redis 블랙리스트 |
+| 같은 가게 첫 방문 기록 동시 생성 | 서로 다른 인증 2건이 동시에 첫 기록을 만들면 유니크 제약으로 한쪽 실패 | 실패 시 재조회 후 증가, 또는 upsert |
 | 운영 설정 미분리 | 공통 설정에 `ddl-auto: update`, `show-sql: true` | `application-prod.yml`(validate, SQL 로그 끔) + Flyway |
 
 <br>
